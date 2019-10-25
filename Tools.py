@@ -90,7 +90,6 @@ def Angular_seperation(pos_1, pos_2, ra_dec=False, degrees=True):
     else:
         return ang_sep
 
-
 def kent(s, dpsi):
     """
     Compute the value of the Kent distribution
@@ -138,6 +137,8 @@ def kent_healpix(src_ra, src_dec, s, nside, allowed_error=0.05):
     :type   dpsi: integer
     :param  dpsi: nside of the healpix map
     """
+    import healpy as hp
+    
     npix = hp.nside2npix(nside)
     pixels = np.arange(npix)
     theta, phi = hp.pix2ang(nside, pixels)
@@ -186,9 +187,6 @@ def pol_fun(x, *c):
     for i in range(len(c)):
         res = res + c[i]*np.power(x, i)
     return res
-
-
-
 
 class Hist(object):
     def __init__(self, data, **kw):
