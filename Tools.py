@@ -83,7 +83,7 @@ def Angular_seperation(pos_1, pos_2, ra_dec=False, degrees=True):
     x2, y2, z2 = Spherical_to_cartesion(theta_2, phi_2)
     inproduct      = x1*x2+y1*y2+z1*z2
     if( np.any(inproduct)>1 or np.any(inproduct)<-1 ):
-        raise Exception("Somethings wrong, inproduct = %f   %f"%(np.min(inproduct), np.max(inproduct)))
+        raise Exception("Invalid inproduct = %f   %f"%(np.min(inproduct), np.max(inproduct)))
     ang_sep = np.arccos(inproduct)
     if( degrees ):
         return np.degrees(ang_sep)
@@ -101,9 +101,13 @@ def kent(s, dpsi):
     :type   dpsi: float
     :param  dpsi: angular seperation (in radians)
     """
-    ssi = np.power(s,-2)
-    norm = ssi/(4*np.pi*np.sinh(ssi))
-    return norm*np.exp(np.cos(dpsi)*ssi)
+    if( s<0.105 ):
+        # return Gaussian pdf if s<6° to avoid overflows of sinh
+        return Two_dim_Gaussian(s, dpsi)
+    else:
+        ssi = np.power(s,-2)
+        norm = ssi/(4*np.pi*np.sinh(ssi))
+        return norm*np.exp(np.cos(dpsi)*ssi)
 
 def Two_dim_Gaussian(s, dpsi):
     """
@@ -116,9 +120,9 @@ def Two_dim_Gaussian(s, dpsi):
     :param  dpsi: angular seperation (in radians)
     """
     norm = 1.0/(2*np.pi*s**2)
-    return norm*np.exp(-0.5*(x/s)**2)
+    return norm*np.exp(-0.5*(dpsi/s)**2)
 
-def kent_healpix(src_ra, src_dec, s, nside):
+def kent_healpix(src_ra, src_dec, s, nside, allowed_error=0.05):
     """
     Generate a healpix for a given source following a Kent distribution
 
@@ -141,7 +145,7 @@ def kent_healpix(src_ra, src_dec, s, nside):
     dpsi = [Angular_seperation(pos_1, [t,p], degrees=False) for t,p in zip(theta,phi)]
     m = [kent(s, dpsi_i)*4*np.pi/npix for dpsi_i in dpsi]
     sum_m = sum(m)
-    if( (sum_m<(1-1e-3)) or (sum_m>(1+1e-3)) ):
+    if( (sum_m<(1-allowed_error)) or (sum_m>(1+allowed_error)) ):
         raise Exception("Normalisation of the map deviates from unity: {}".format(sum_m))
     else:
         # renormalize due to 'rough' integration
