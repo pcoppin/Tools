@@ -102,7 +102,7 @@ def kent(s, dpsi):
     :param  dpsi: angular seperation (in radians)
     """
     if( s<0.105 ):
-        # return Gaussian pdf if s<6° to avoid overflows of sinh
+        # return Gaussian pdf if s<6 degrees to avoid overflows of sinh
         return Two_dim_Gaussian(s, dpsi)
     else:
         ssi = np.power(s,-2)
