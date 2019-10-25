@@ -1,0 +1,49 @@
+figure.figsize       : 10, 7
+
+axes.grid            : True
+
+legend.fontsize      : large
+legend.numpoints     : 1
+legend.scatterpoints : 1
+
+font.family          : Bitstream Vera Sans
+
+font.size            : 24
+axes.labelsize       : 32
+xtick.labelsize      : 24
+ytick.labelsize      : 24
+axes.titlesize       : 36
+lines.linewidth      : 2.5
+
+text.usetex          : True
+
+# colors        = ["red","blue","green",'brown','purple']
+# markers       = ["o","s","v","^","D","p","*","8","x"]
+# linestyles    = ['-','--','-.',':','.',',','o','v','^','<','>','1','2','3','4','s','p','*','h','H','+','x','D','d','|','_']
+# dashes        = [[12, 2], [5, 2], [1, 1], [11, 1, 1, 1], [4, 1, 1, 1]]
+
+# Description of the markers: 
+#              '-'       solid line style, '--'      dashed line style, '-.'      dash-dot line style, ':'       dotted line style, '.'       point marker
+#              ','       pixel marker, 'o'       circle marker, 'v'       triangle_down marker, '^'       triangle_up marker, '<'       triangle_left marker
+#              '>'       triangle_right marker, '1'       tri_down marker, '2'       tri_up marker, '3'       tri_left marker, '4'       tri_right marker
+#              's'       square marker, 'p'       pentagon marker, '*'       star marker, 'h'       hexagon1 marker, 'H'       hexagon2 marker
+#              '+'       plus marker, 'x'       x marker, 'D'       diamond marker, 'd'       thin_diamond marker, '|'       vline marker, '_'   hline marker
+
+
+# Histrogram in nieuwe matplotlib: edgecolor='black', linewidth=1.2, color="blue"
+# legend = plt.legend(loc="best", handlelength=2.4)  #legend.get_frame().set_facecolor('white')
+# plt.savefig("Erlang_distribution_n_1_tem_6.pdf",bbox_inches='tight')
+# linewidth=2.0, marker='o', linestyle='--', color='blue', label='Label'
+# dashes = [[12, 0], [15,3], [3,3], [9,3,3,3], [12,6,12,6], [3,6,3,6], [27,3,3,3], [6,6,18,6], [8,6,2,6,2,6], [12,3,12,3,3,3], [12,3,3,3,12,3]]
+
+# ax = plt.gca()
+# from mpl_toolkits.axes_grid1 import make_axes_locatable
+# divider = make_axes_locatable(ax)
+# cax = divider.append_axes("right", size="5%", pad=0.05)
+# ttt = plt.colorbar(cax=cax)
+
+# plt.style.use('../matplotlib_style')
+
+#import seaborn as sea
+#sea.set_context("poster")
+#sea.set_style("ticks")
