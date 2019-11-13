@@ -1,13 +1,17 @@
 import numpy as np
-import matplotlib as plt
+import matplotlib.pyplot as plt
+from importlib import reload
 
 ### In a notebook
 #from pathlib import Path
 #pwd = Path().resolve()
-#Code_foler = str(pwd.parent)
 ### In a python script
 #import os
 #pwd = os.path.dirname(os.path.realpath(__file__))
+### Then
+#Code_foler = str(pwd.parent)
+#sys.path.insert(0, Code_folder+"/Tools")
+#import Tools
 
 sr_to_deg2        = (180/np.pi)**2
 Sky_in_square_deg = 4*np.pi * sr_to_deg2
@@ -189,16 +193,39 @@ def pol_fun(x, *c):
     return res
 
 class Hist(object):
-    def __init__(self, data, **kw):
+    def __init__(self, data, log=False, **kw):
+        if( log ):
+            if( ("bins" in kw) and isinstance(kw["bins"],int) ):
+                n_bins = kw["bins"]
+            else:
+                n_bins = 10
+            eps = 1.01
+            kw["bins"] = np.logspace(np.log10(min(data)/eps), 
+                                     np.log10(max(data)*eps),
+                                     n_bins)
+            
         self.hist, self.bins = np.histogram(data, **kw)
         self.bin_width = self.bins[1:] - self.bins[:-1]
         self.bin_center = self.bins[:-1] + 0.5*self.bin_width
         self.sum = sum(self.hist)
+        
+        self.hist_density = self.hist/self.bin_width
+        self.hist_normed = self.hist/self.sum
+        self.cdf = self.hist_normed.cumsum()
     
-    def plot(self, normed=False, **kw):
-        height = self.hist
-        if( normed ):
-            height = height/float(self.sum)
+    def plot(self, type="normal", **kw):
+        if( type=="normal" ):
+            height = self.hist
+        elif( type=="normed" ):
+            height = self.hist_normed
+        elif( type=="density" ):
+            height = self.hist_density
+        elif( type=="cdf" ):
+            height = self.cdf
+        elif( type=="inv_cdf" ):
+            height = 1-self.cdf
+        else:
+            raise Exception("Unknown histogram type specified: {}. Please selected 'normal' (default), 'normed' or 'density'.")
         mask = height>0
         return plt.bar(self.bins[:-1][mask], height[mask], self.bin_width[mask], align='edge', **kw)
         
