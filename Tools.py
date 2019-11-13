@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from importlib import reload
 
 ### In a notebook
 #from pathlib import Path
@@ -195,15 +194,14 @@ def pol_fun(x, *c):
 class Hist(object):
     def __init__(self, data, log=False, **kw):
         if( log ):
-            if( ("bins" in kw) and isinstance(kw["bins"],int) ):
-                n_bins = kw["bins"]
-            else:
-                n_bins = 10
-            eps = 1.01
-            kw["bins"] = np.logspace(np.log10(min(data)/eps), 
-                                     np.log10(max(data)*eps),
-                                     n_bins)
-            
+            if( "bins" not in kw ):
+                kw["bins"] = 10
+            if( isinstance(kw["bins"],int) ):
+                eps = 1.01
+                kw["bins"] = np.logspace(np.log10(min(data)/eps), 
+                                         np.log10(max(data)*eps),
+                                         kw["bins"])
+        
         self.hist, self.bins = np.histogram(data, **kw)
         self.bin_width = self.bins[1:] - self.bins[:-1]
         self.bin_center = self.bins[:-1] + 0.5*self.bin_width
