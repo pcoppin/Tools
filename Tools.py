@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 
 sr_to_deg2        = (180/np.pi)**2
 Sky_in_square_deg = 4*np.pi * sr_to_deg2
+Code_folder       = "/mnt/2690D37B90D35043/PhD/Code"
+mpl_style_file    = Code_folder + "/Tools/matplotlib_style"
 
 def Reduced_chi_squared(function, x_data, y_data, y_error, params):
     if(len(x_data)!=len(y_data)):
@@ -191,8 +193,26 @@ def pol_fun(x, *c):
         res = res + c[i]*np.power(x, i)
     return res
 
+def Print_rounded(a, b):
+    '''
+    # Print a+-b rounded to 2 significant digits of the uncertainty
+    
+    :type   a: float
+    :param  a: Value of a single measurement
+    
+    :type   b: float
+    :param  b: Uncertainty on the measurement of a
+    '''
+    log_base = int(np.floor(np.log10(b)))
+    if( log_base==0 ):
+        return r"{:.1f} +-{:4.1f}".format(a,b)
+    else:
+        x, y = np.array([a,b])/np.power(10.0, log_base)
+        return r"( {:.1f} +-{:4.1f} ) x 10^{:d}".format(x, y, log_base)
+    return log_base
+
 class Hist(object):
-    def __init__(self, data, log=False, **kw):
+    def __init__(self, data, log=False, height=False, **kw):
         if( log ):
             if( "bins" not in kw ):
                 kw["bins"] = 10
@@ -202,7 +222,12 @@ class Hist(object):
                                          np.log10(max(data)*eps),
                                          kw["bins"])
         
-        self.hist, self.bins = np.histogram(data, **kw)
+        if( height ):
+            if( log or ("bins" not in kw) ):
+                raise Exception("Bins must be specified explicitly when using height=True")
+            self.hist, self.bins = np.array(data), np.array(kw["bins"])
+        else:
+            self.hist, self.bins = np.histogram(data, **kw)
         self.bin_width = self.bins[1:] - self.bins[:-1]
         self.bin_center = self.bins[:-1] + 0.5*self.bin_width
         self.sum = sum(self.hist)
