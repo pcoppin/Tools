@@ -51,6 +51,100 @@ def Print_name_input_arguments(a, f, b):
             names.append(i)
     print(names)
 
+def distance_point_to_line(point,line):
+    x         = np.array(point)
+    y         = np.array(line[:3])
+    theta     = line[3]
+    phi       = line[4]
+    direction = np.array([np.sin(theta)*np.cos(phi),np.sin(theta)*np.sin(phi),np.cos(theta)])
+    t_min     = sum((y-x)*direction)
+    d_min_vec = x+t_min*direction-y
+    return np.sqrt(sum(d_min_vec*d_min_vec))
+
+def Efficiency_for_binomial_process(N,k,probability_content=0.683):
+    """
+    Compute the efficiency and (left & right) uncertainty for a binomial process,
+       e.g. when computing the ratio between two histogram. The method in this
+       function is based on https://home.fnal.gov/~paterno/images/effic.pdf
+
+    :type   N: Integer
+    :param  N: Total number of trials
+
+    :type   k: Integer
+    :param  k: Total number of successes out of the N trials
+
+    :type   probability_content: float
+    :param  probability_content: probability content contained by the
+                                 uncertainty interval that his returned
+
+    """
+    from decimal import Decimal
+    if( (probability_content>=1) or (probability_content<=0) ):
+        raise Exception("The probability content must be between 0 and 1!")
+    # Function to quickly compute large binomial coefficients (exact)
+    # Borrowed from: https://grocid.net/2012/07/02/quick-and-dirty-way-to-calculate-large-binomial-coefficients-in-python/
+    def pow_binomial(n, k):
+        def eratosthenes_simple_numbers(N):
+            yield 2
+            nonsimp = set()
+            for i in xrange(3, N + 1, 2):
+                if i not in nonsimp:
+                    nonsimp |= {j for j in xrange(i * i, N + 1, 2 * i)}
+                    yield i
+        def calc_pow_in_factorial(a, p):
+            res = 0
+            while a:
+                a //= p
+                res += a
+            return res
+        ans = 1
+        for p in eratosthenes_simple_numbers(n):
+            ans *= p ** (calc_pow_in_factorial(n, p) - calc_pow_in_factorial(k, p) - calc_pow_in_factorial(n - k, p))
+        return ans
+    # Binomial function
+    def Binomial_function(N,k,epsilon):
+        if( (k==0) and (epsilon==Decimal(0.0)) ):
+            return Decimal(1)
+        elif( (k==N) and (epsilon==Decimal(1.0)) ):
+            return Decimal(1)
+        else:
+            return Decimal(np.power(epsilon,k)*np.power(1-epsilon,N-k))
+    # Find the limits
+    if(k>N):
+        raise Exception("Efficiency larger than one!")
+    prefactor        = Decimal(N+1)*Decimal(pow_binomial(N,k))
+    center           = Decimal(k)/N
+    left_limit       = Decimal(center)
+    right_limit      = Decimal(center)
+    surface_to_left  = Decimal(0.0)
+    surface_to_right = Decimal(0.0)
+    steps_taken      = 0
+    while( (surface_to_left+surface_to_right)<probability_content ):
+        if( ((right_limit==1) or (surface_to_left<=surface_to_right)) and (not (left_limit<1e-20) )):
+            value_binomial_function = prefactor*Binomial_function(N,k,left_limit)
+            if(value_binomial_function>0.0):
+                stepsize         = min(Decimal(0.01)/(prefactor*Binomial_function(N,k,left_limit)),Decimal(0.01))
+            if(stepsize<1e-6):
+                stepsize = Decimal(1e-6)
+            if( (left_limit-stepsize)<0 ):
+                stepsize = left_limit
+            surface_to_left += prefactor*stepsize*Decimal(0.5)*(Binomial_function(N,k,left_limit)+Binomial_function(N,k,left_limit-stepsize))
+            left_limit = left_limit-stepsize
+
+        else:
+            value_binomial_function = prefactor*Binomial_function(N,k,right_limit)
+            if(value_binomial_function>0.0):
+                stepsize         = min(Decimal(0.01)/(prefactor*Binomial_function(N,k,right_limit)),Decimal(0.01))
+            if(stepsize<1e-6):
+                stepsize = Decimal(1e-6)
+            if( (right_limit+stepsize)>1.0 ):
+                stepsize = 1-right_limit
+            surface_to_right += prefactor*stepsize*Decimal(0.5)*(Binomial_function(N,k,right_limit)+Binomial_function(N,k,right_limit+stepsize))
+            right_limit = right_limit + stepsize
+
+        steps_taken += 1
+    return float(center),abs(float(left_limit)-float(center)),float(right_limit)-float(center)
+
 def Angular_seperation(pos_1, pos_2, ra_dec=False, degrees=True):
     """
     Compute the angular seperation between point A & B on a sphere
@@ -234,21 +328,24 @@ class Hist(object):
         
         self.hist_density = self.hist/self.bin_width
         self.hist_normed = self.hist/self.sum
+        self.pdf = self.hist_normed/self.bin_width
         self.cdf = self.hist_normed.cumsum()
     
-    def plot(self, type="normal", **kw):
-        if( type=="normal" ):
+    def plot(self, type="hist", **kw):
+        if( type=="hist" ):
             height = self.hist
         elif( type=="normed" ):
             height = self.hist_normed
         elif( type=="density" ):
             height = self.hist_density
+        elif( type=="pdf" ):
+            height = self.pdf
         elif( type=="cdf" ):
             height = self.cdf
         elif( type=="inv_cdf" ):
             height = 1-self.cdf
         else:
-            raise Exception("Unknown histogram type specified: {}. Please selected 'normal' (default), 'normed' or 'density'.")
+            raise Exception("Unknown histogram type specified: {}. Please selected 'hist' (default), 'normed', 'density', 'pdf', 'cdf' or 'inv_cdf'.")
         mask = height>0
         return plt.bar(self.bins[:-1][mask], height[mask], self.bin_width[mask], align='edge', **kw)
         
