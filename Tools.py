@@ -298,6 +298,41 @@ def mjd_to_year(mjd):
     days_per_years = 365.2422
     return (np.array(mjd)-mjd_2010_01_01)/days_per_years + 2010
 
+def Track_for_loop_progress(iterator, len_iterator, message=None):
+    """
+    Track the progress of a for loop using print statements
+
+    :type   iterator: int
+    :param  iterator: Must run from 0 to len_iterator-1
+    
+    :type   len_iterator: int
+    :param  len_iterator: Number of times the loop is called
+    
+    :type   message: str
+    :param  message: additional output to be printed
+    """
+    import timeit
+    import sys
+    from IPython.display import clear_output
+    if( iterator==0 ):
+        global Track_for_loop_progress_start
+        Track_for_loop_progress_start = timeit.default_timer()
+    stop = timeit.default_timer()
+    if( (iterator/len_iterator)<0.05 ):
+        expected_time = 0.0
+    else:
+        time_perc = timeit.default_timer()
+        expected_time = np.round((time_perc-Track_for_loop_progress_start)/((iterator+1)/len_iterator), 2)
+    clear_output(wait=True)
+    print("Current progress:", np.round( (iterator+1)/len_iterator*100, 2), "%")
+    print("Current run time:", int((stop-Track_for_loop_progress_start)/60),"min", int((stop-Track_for_loop_progress_start)%60), "s")
+    print("Expected run time:", int(expected_time/60),"min", int(expected_time%60), "s")
+    if( message ):
+        print(message)
+    sys.stdout.flush()
+    if( iterator==(len_iterator-1) ):
+        del Track_for_loop_progress_start
+
 def Print_rounded(a, b):
     '''
     # Print a+-b rounded to 2 significant digits of the uncertainty
