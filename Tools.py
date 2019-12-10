@@ -296,7 +296,7 @@ def mjd_to_year(mjd):
     """
     mjd_2010_01_01 = 55197
     days_per_years = 365.2422
-    return = (np.array(mjd)-mjd_2010_01_01)/days_per_years
+    return (np.array(mjd)-mjd_2010_01_01)/days_per_years + 2010
 
 def Print_rounded(a, b):
     '''
