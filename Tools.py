@@ -287,6 +287,17 @@ def pol_fun(x, *c):
         res = res + c[i]*np.power(x, i)
     return res
 
+def mjd_to_year(mjd):
+    """
+    Conver the mjd value to the year
+
+    :type   mjd: array or list
+    :param  mjd: Modified Julian Data values
+    """
+    mjd_2010_01_01 = 55197
+    days_per_years = 365.2422
+    return = (np.array(mjd)-mjd_2010_01_01)/days_per_years
+
 def Print_rounded(a, b):
     '''
     # Print a+-b rounded to 2 significant digits of the uncertainty
