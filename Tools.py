@@ -18,11 +18,13 @@ Code_folder       = "/mnt/2690D37B90D35043/PhD/Code"
 mpl_style_file    = Code_folder + "/Tools/matplotlib_style"
 
 def Reduced_chi_squared(function, x_data, y_data, y_error, params):
+    from scipy.stats import chi2
     if(len(x_data)!=len(y_data)):
         raise Exception("X & Y array have different lengths")
     Ndog = len(x_data) - len(params)
-    chi2 = np.sum( np.power(y_data-function(x_data, *params),2) / np.power(y_error,2) )
-    return chi2/Ndog
+    CHI2 = np.sum( np.power(y_data-function(x_data, *params),2) / np.power(y_error,2) )
+    p_value = 1 - chi2.cdf(CHI2,Ndog)
+    return CHI2/Ndog, p_value
 
 def Multi_split(string, splits):
     res = [string]
@@ -87,9 +89,9 @@ def Efficiency_for_binomial_process(N,k,probability_content=0.683):
         def eratosthenes_simple_numbers(N):
             yield 2
             nonsimp = set()
-            for i in xrange(3, N + 1, 2):
+            for i in range(3, N + 1, 2):
                 if i not in nonsimp:
-                    nonsimp |= {j for j in xrange(i * i, N + 1, 2 * i)}
+                    nonsimp |= {j for j in range(i * i, N + 1, 2 * i)}
                     yield i
         def calc_pow_in_factorial(a, p):
             res = 0
@@ -143,7 +145,7 @@ def Efficiency_for_binomial_process(N,k,probability_content=0.683):
             right_limit = right_limit + stepsize
 
         steps_taken += 1
-    return float(center),abs(float(left_limit)-float(center)),float(right_limit)-float(center)
+    return np.array([float(center), abs(float(left_limit)-float(center)), float(right_limit)-float(center)])
 
 def Angular_seperation(pos_1, pos_2, ra_dec=False, degrees=True):
     """
@@ -289,7 +291,7 @@ def pol_fun(x, *c):
 
 def mjd_to_year(mjd):
     """
-    Conver the mjd value to the year
+    Conver the mjd value to the year (rough method)
 
     :type   mjd: array or list
     :param  mjd: Modified Julian Data values
@@ -368,6 +370,9 @@ class Hist(object):
             self.hist, self.bins = np.array(data), np.array(kw["bins"])
         else:
             self.hist, self.bins = np.histogram(data, **kw)
+                    
+        
+        self.N_data = len(data)
         self.bin_width = self.bins[1:] - self.bins[:-1]
         self.bin_center = self.bins[:-1] + 0.5*self.bin_width
         self.sum = sum(self.hist)
@@ -376,6 +381,12 @@ class Hist(object):
         self.hist_normed = self.hist/self.sum
         self.pdf = self.hist_normed/self.bin_width
         self.cdf = self.hist_normed.cumsum()
+    
+    def set_errors(self, probability_content = 0.683):
+        self.binomial_uncertainty = []
+        for N_i in self.hist:
+            self.binomial_uncertainty.append( self.N_data*Efficiency_for_binomial_process(self.N_data, int(N_i), probability_content)[1:] )
+        
     
     def plot(self, type="hist", **kw):
         if( type=="hist" ):
@@ -394,4 +405,58 @@ class Hist(object):
             raise Exception("Unknown histogram type specified: {}. Please selected 'hist' (default), 'normed', 'density', 'pdf', 'cdf' or 'inv_cdf'.")
         mask = height>0
         return plt.bar(self.bins[:-1][mask], height[mask], self.bin_width[mask], align='edge', **kw)
-        
+    
+    def plot_errorbar(self, type="hist", **kw):
+        if( type=="hist" ):
+            height = self.hist
+            uncertainty = self.binomial_uncertainty
+        elif( type=="pdf" ):
+            height = self.pdf
+            uncertainty = [uncertainty/self.sum/bin_width for (uncertainty,bin_width) in zip(self.binomial_uncertainty,self.bin_width)]
+        return plt.errorbar(self.bin_center, height, list(zip(*uncertainty)), **kw)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
