@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 
 ### In a notebook
@@ -80,6 +81,15 @@ def Efficiency_for_binomial_process(N,k,probability_content=0.683):
                                  uncertainty interval that his returned
 
     """
+    if( isinstance(N,(np.int32,np.int64)) ):
+        N = int(N)
+    if( isinstance(k,(np.int32,np.int64)) ):
+        k = int(k)
+    
+    if( (N>1000) and (k>20) ):
+        sigma = np.sqrt( k/np.power(N,2) + np.power(k,2)/np.power(N,3) )
+        return np.array([float(k)/N, 0.5*sigma, 0.5*sigma])
+    
     from decimal import Decimal
     if( (probability_content>=1) or (probability_content<=0) ):
         raise Exception("The probability content must be between 0 and 1!")
@@ -150,6 +160,7 @@ def Efficiency_for_binomial_process(N,k,probability_content=0.683):
 def Angular_seperation(pos_1, pos_2, ra_dec=False, degrees=True):
     """
     Compute the angular seperation between point A & B on a sphere
+    theta & phi can be arrays, allowing one function call to calculate the seperation between multiple points
 
     :type   pos_1: array or list
     :param  pos_1: (theta, phi) in spherical coordinates of point A OR (dec, ra)
@@ -182,14 +193,37 @@ def Angular_seperation(pos_1, pos_2, ra_dec=False, degrees=True):
     
     x1, y1, z1 = Spherical_to_cartesion(theta_1, phi_1)
     x2, y2, z2 = Spherical_to_cartesion(theta_2, phi_2)
-    inproduct      = x1*x2+y1*y2+z1*z2
-    if( np.any(inproduct)>1 or np.any(inproduct)<-1 ):
-        raise Exception("Invalid inproduct = %f   %f"%(np.min(inproduct), np.max(inproduct)))
+    inproduct = x1*x2+y1*y2+z1*z2
+    inproduct = np.clip(inproduct, -1, 1) # Account for numerical precision
     ang_sep = np.arccos(inproduct)
     if( degrees ):
         return np.degrees(ang_sep)
     else:
         return ang_sep
+
+def Generate_uniform_points_on_sphere(N, ra_dec=False, degrees=False):
+    """
+    Generate N points on the unit sphere
+    Based on https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
+
+    :type   N: integer
+    :param  N: Number of points to be generated
+
+    :type   ra_dec: boolean
+    :param  ra_dec: False if pos_1/2 are in spherical coordinates, True if they are in ra & dec
+
+    :type   degrees: boolean
+    :param  degrees: False if pos_1/2 are in degrees, True if they are radians
+    """
+    indices = np.arange(0, N, dtype=float) + 0.5
+    theta = np.arccos(1 - 2*indices/N)
+    phi = (np.pi * (1 + 5**0.5) * indices)%(2*np.pi)
+    if( ra_dec ):
+        theta = np.pi/2 - theta
+    if( degrees ):
+        return np.degrees(theta), np.degrees(phi)
+    else:
+        return theta, phi
 
 def kent(s, dpsi):
     """
@@ -198,7 +232,7 @@ def kent(s, dpsi):
     :type   s: float
     :param  s: sigma or the angular uncertainty (in radians)
 
-    :type   dpsi: float
+    :type   dpsi: float or np.array
     :param  dpsi: angular seperation (in radians)
     """
     if( s<0.105 ):
@@ -244,8 +278,12 @@ def kent_healpix(src_ra, src_dec, s, nside, allowed_error=0.05):
     pixels = np.arange(npix)
     theta, phi = hp.pix2ang(nside, pixels)
     pos_1 = [np.pi/2-src_dec, src_ra]
-    dpsi = [Angular_seperation(pos_1, [t,p], degrees=False) for t,p in zip(theta,phi)]
-    m = [kent(s, dpsi_i)*4*np.pi/npix for dpsi_i in dpsi]
+    #dpsi = [Angular_seperation(pos_1, [t,p], degrees=False) for t,p in zip(theta,phi)]
+    #m = [kent(s, dpsi_i)*4*np.pi/npix for dpsi_i in dpsi]
+    
+    dpsi = Angular_seperation(pos_1, [theta,phi], degrees=False)
+    m = kent(s, dpsi)*4*np.pi/npix
+    
     sum_m = sum(m)
     if( (sum_m<(1-allowed_error)) or (sum_m>(1+allowed_error)) ):
         raise Exception("Normalisation of the map deviates from unity: {}".format(sum_m))
@@ -353,6 +391,32 @@ def Print_rounded(a, b):
         return r"( {:.1f} +-{:4.1f} ) x 10^{:d}".format(x, y, log_base)
     return log_base
 
+def Plot_skymap(prior):
+    import healpy as hp
+    nside    = prior.nside
+    N_pixels = prior.npix
+    pixel_area = Sky_in_square_deg/N_pixels
+    Pixel_pos = hp.pix2ang(nside, np.arange(N_pixels))
+    Pixel_pos_zenith, Pixel_pos_RA = Pixel_pos
+    Pixel_pos_DEC = np.pi/2-Pixel_pos_zenith
+    weights = prior.map / pixel_area
+    fig = plt.figure(figsize=(15,7.5))
+    subpl = plt.subplot(111, projection='mollweide')
+    max_weight = max(weights)
+    sc = subpl.scatter( np.pi-Pixel_pos_RA, Pixel_pos_DEC, c=[max(max_weight*1e-8, w) for w in weights], norm=matplotlib.colors.LogNorm(vmin=max_weight*1e-7, clip=True) )
+    Fermi_ticks = np.array(range(360,-1 ,-30))
+    Fermi_ticks_l = list(Fermi_ticks)
+    Fermi_ticks_l[0]  = ""
+    Fermi_ticks_l[-1] = ""
+    for i in range(1,len(Fermi_ticks_l)-1):
+        Fermi_ticks_l[i] = str(Fermi_ticks_l[i])+"°"
+    xticks_pos    = np.pi - Fermi_ticks/180*np.pi
+    xticks_labels = list(range(360,-1 ,-30))
+    plt.xticks(ticks=xticks_pos, labels=Fermi_ticks_l, color="white")
+    plt.colorbar(sc, label="Probability per square degree")
+    plt.close()
+    return fig
+
 class Hist(object):
     def __init__(self, data, log=False, height=False, **kw):
         if( log ):
@@ -363,6 +427,10 @@ class Hist(object):
                 kw["bins"] = np.logspace(np.log10(min(data)/eps), 
                                          np.log10(max(data)*eps),
                                          kw["bins"])
+        elif( ("bins" in kw) and isinstance(kw["bins"],str) and (kw["bins"]=="int") ):
+            floor = int(min(data)+0.5-1e-6) - 0.5
+            ceiling = int(max(data)-0.5+1e-6) + 1.5
+            kw["bins"] = np.linspace(floor, ceiling, int(ceiling-floor)+1)
         
         if( height ):
             if( log or ("bins" not in kw) ):
@@ -370,27 +438,31 @@ class Hist(object):
             self.hist, self.bins = np.array(data), np.array(kw["bins"])
         else:
             self.hist, self.bins = np.histogram(data, **kw)
-                    
-        
-        self.N_data = len(data)
         self.bin_width = self.bins[1:] - self.bins[:-1]
         self.bin_center = self.bins[:-1] + 0.5*self.bin_width
-        self.sum = sum(self.hist)
+        self.set_vars()
         
+    def set_vars(self):
+        self.sum = np.sum(self.hist)
         self.hist_density = self.hist/self.bin_width
         self.hist_normed = self.hist/self.sum
         self.pdf = self.hist_normed/self.bin_width
         self.cdf = self.hist_normed.cumsum()
+        self.binomial_uncertainty = []
+    
+    def Add_counts(self, idx, counts):
+        self.hist[idx] = self.hist[idx] + counts
+        self.set_vars()
     
     def set_errors(self, probability_content = 0.683):
-        self.binomial_uncertainty = []
         for N_i in self.hist:
-            self.binomial_uncertainty.append( self.N_data*Efficiency_for_binomial_process(self.N_data, int(N_i), probability_content)[1:] )
-        
+            self.binomial_uncertainty.append( self.sum*Efficiency_for_binomial_process(self.sum, int(N_i), probability_content)[1:] )
     
-    def plot(self, type="hist", **kw):
+    def plot(self, ax=plt, type="hist", **kw):
         if( type=="hist" ):
             height = self.hist
+        elif( type=="cumsum" ):
+            height = self.hist.cumsum()
         elif( type=="normed" ):
             height = self.hist_normed
         elif( type=="density" ):
@@ -404,58 +476,18 @@ class Hist(object):
         else:
             raise Exception("Unknown histogram type specified: {}. Please selected 'hist' (default), 'normed', 'density', 'pdf', 'cdf' or 'inv_cdf'.")
         mask = height>0
-        return plt.bar(self.bins[:-1][mask], height[mask], self.bin_width[mask], align='edge', **kw)
+        return ax.bar(self.bins[:-1][mask], height[mask], self.bin_width[mask], align='edge', **kw)
     
-    def plot_errorbar(self, type="hist", **kw):
+    def plot_errorbar(self, ax=plt, type="hist", linestyle="None", fmt=".", markersize=10, **kw):
+        if( len(self.binomial_uncertainty)==0 ):
+            self.set_errors()
         if( type=="hist" ):
             height = self.hist
             uncertainty = self.binomial_uncertainty
         elif( type=="pdf" ):
             height = self.pdf
             uncertainty = [uncertainty/self.sum/bin_width for (uncertainty,bin_width) in zip(self.binomial_uncertainty,self.bin_width)]
-        return plt.errorbar(self.bin_center, height, list(zip(*uncertainty)), **kw)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        return ax.errorbar(self.bin_center, height, list(zip(*uncertainty)), linestyle=linestyle, fmt=fmt, markersize=markersize, **kw)
 
 
 
