@@ -89,7 +89,7 @@ def Efficiency_for_binomial_process(N,k,probability_content=0.683):
         k = int(k)
     
     if( (N>1000) and (k>20) ):
-        sigma = np.sqrt( k/np.power(N,2) + np.power(k,2)/np.power(N,3) )
+        sigma = np.sqrt( float(k)/np.power(N,2) + np.power(float(k),2)/np.power(N,3) )
         return np.array([float(k)/N, 0.5*sigma, 0.5*sigma])
     
     from decimal import Decimal
