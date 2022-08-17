@@ -447,7 +447,7 @@ class Hist(object):
     def set_vars(self):
         self.sum = np.sum(self.hist)
         self.hist_density = self.hist/self.bin_width
-        self.hist_normed = self.hist/self.sum
+        self.hist_normed = self.hist/np.float(self.sum)
         self.pdf = self.hist_normed/self.bin_width
         self.cdf = self.hist_normed.cumsum()
         self.binomial_uncertainty = []
