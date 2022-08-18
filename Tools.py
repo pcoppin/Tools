@@ -66,6 +66,14 @@ def distance_point_to_line(point,line):
     d_min_vec = x+t_min*direction-y
     return np.sqrt(sum(d_min_vec*d_min_vec))
 
+def DmpTrigger(TriggerStat, idx):
+    # TriggerStat: dc.GetDmpEvent(i).pEvtHeader().GetTriggerStatus()
+    # idx: 0 (unbiased), 1 & 2 (MIP), 3 (high energy), 4 (low energy)
+    TriggerStatBin = format(TriggerStat,"b")[::-1]
+    enabled   = int(TriggerStatBin[idx])
+    triggered = int(TriggerStatBin[8+idx])
+    return enabled * triggered
+
 def Efficiency_for_binomial_process(N,k,probability_content=0.683):
     """
     Compute the efficiency and (left & right) uncertainty for a binomial process,
