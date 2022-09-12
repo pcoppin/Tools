@@ -68,6 +68,7 @@ def distance_point_to_line(point,line):
 
 def DmpTrigger(TriggerStat, idx):
     # TriggerStat: dc.GetDmpEvent(i).pEvtHeader().GetTriggerStatus()
+    # Alternatively: Header.GeneratedTrigger(idx) ;  Header.EnabledTrigger(idx)
     # idx: 0 (unbiased), 1 & 2 (MIP), 3 (high energy), 4 (low energy)
     TriggerStatBin = format(TriggerStat,"b")[::-1]
     enabled   = int(TriggerStatBin[idx])
