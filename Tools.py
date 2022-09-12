@@ -66,12 +66,18 @@ def distance_point_to_line(point,line):
     d_min_vec = x+t_min*direction-y
     return np.sqrt(sum(d_min_vec*d_min_vec))
 
-def DmpTrigger(TriggerStat, idx):
+def DmpTrigger(TriggerStat, idx, MC=None):
     # TriggerStat: dc.GetDmpEvent(i).pEvtHeader().GetTriggerStatus()
     # Alternatively: Header.GeneratedTrigger(idx) ;  Header.EnabledTrigger(idx)
     # idx: 0 (unbiased), 1 & 2 (MIP), 3 (high energy), 4 (low energy)
     TriggerStatBin = format(TriggerStat,"b")[::-1]
-    enabled   = int(TriggerStatBin[idx])
+    if( MC is None ):
+        raise Exception("Specify MC as 'True' or 'False'")
+    elif( MC ):
+        # Generated is always True for MC, except for MIP, for which it's always False
+        enabled   = 1
+    else:
+        enabled   = int(TriggerStatBin[idx])
     triggered = int(TriggerStatBin[8+idx])
     return enabled * triggered
 
