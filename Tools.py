@@ -103,9 +103,14 @@ def Efficiency_for_binomial_process(N,k,probability_content=0.683):
     if( isinstance(k,(np.int32,np.int64)) ):
         k = int(k)
     
-    if( (N>1000) and (k>20) ):
-        sigma = np.sqrt( float(k)/np.power(N,2) + np.power(float(k),2)/np.power(N,3) )
-        return np.array([float(k)/N, 0.5*sigma, 0.5*sigma])
+    if( (N>1000) and (k>50) and ((N-k)>50) ):
+        from scipy.stats import norm
+        sigma_gauss = norm.isf( 0.5*(1-probability_content) )
+        eff = float(k)/N
+        sigma = sigma_gauss * np.sqrt( k/np.power(N,2) + np.power(k,2)/np.power(N,3) )
+        l_err = min(sigma,eff)
+        r_err = min(sigma,1-eff)
+        return np.array([eff, l_err, r_err])
     
     from decimal import Decimal
     if( (probability_content>=1) or (probability_content<=0) ):
