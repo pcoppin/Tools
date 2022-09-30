@@ -362,7 +362,7 @@ def mjd_to_year(mjd):
     days_per_years = 365.2422
     return (np.array(mjd)-mjd_2010_01_01)/days_per_years + 2010
 
-def toYearFraction(date=date):
+def toYearFraction(date):
     """
     Convert a datetime to the year (in float format)
 
