@@ -473,7 +473,9 @@ class Hist(object):
         self.pdf = self.hist_normed/self.bin_width
         self.cdf = self.hist_normed.cumsum()
         self.binomial_uncertainty = []
-    
+        bins_ratio = self.bins[1:]/self.bins[:-1]
+        self.log = all(np.isclose(bins_ratio,bins_ratio[0]))
+        
     def Add_counts(self, idx, counts):
         self.hist[idx] = self.hist[idx] + counts
         self.set_vars()
@@ -485,22 +487,32 @@ class Hist(object):
     def plot(self, ax=plt, type="hist", **kw):
         if( type=="hist" ):
             height = self.hist
+            ylabel = "Counts"
         elif( type=="cumsum" ):
             height = self.hist.cumsum()
+            ylabel = "Cumulative counts"
         elif( type=="normed" ):
             height = self.hist_normed
+            ylabel = "Counts normed per bin"
         elif( type=="density" ):
             height = self.hist_density
+            ylabel = "Density"
         elif( type=="pdf" ):
             height = self.pdf
+            ylabel = "PDF"
         elif( type=="cdf" ):
             height = self.cdf
+            ylabel = "CDF"
         elif( type=="inv_cdf" ):
             height = 1-self.cdf
         else:
             raise Exception("Unknown histogram type specified: {}. Please selected 'hist' (default), 'normed', 'density', 'pdf', 'cdf' or 'inv_cdf'.")
         mask = height>0
-        return ax.bar(self.bins[:-1][mask], height[mask], self.bin_width[mask], align='edge', **kw)
+        plot = ax.bar(self.bins[:-1][mask], height[mask], self.bin_width[mask], align='edge', **kw)
+        ax.ylabel(ylabel)
+        if( self.log ):
+            ax.xscale("log")
+        return plot
     
     def plot_errorbar(self, ax=plt, type="hist", linestyle="None", fmt=".", markersize=10, **kw):
         if( len(self.binomial_uncertainty)==0 ):
