@@ -475,7 +475,7 @@ class Hist(object):
         self.binomial_uncertainty = []
         bins_ratio = self.bins[1:]/self.bins[:-1]
         self.log = all(np.isclose(bins_ratio,bins_ratio[0]))
-        
+
     def Add_counts(self, idx, counts):
         self.hist[idx] = self.hist[idx] + counts
         self.set_vars()
@@ -484,7 +484,7 @@ class Hist(object):
         for N_i in self.hist:
             self.binomial_uncertainty.append( self.sum*Efficiency_for_binomial_process(self.sum, int(N_i), probability_content)[1:] )
     
-    def plot(self, ax=plt, type="hist", **kw):
+    def plot(self, type="hist", ax=plt, **kw):
         if( type=="hist" ):
             height = self.hist
             ylabel = "Counts"
@@ -507,8 +507,13 @@ class Hist(object):
             height = 1-self.cdf
         else:
             raise Exception("Unknown histogram type specified: {}. Please selected 'hist' (default), 'normed', 'density', 'pdf', 'cdf' or 'inv_cdf'.")
-        mask = height>0
-        plot = ax.bar(self.bins[:-1][mask], height[mask], self.bin_width[mask], align='edge', **kw)
+        
+        if( type=="cdf" ):
+            y = [0] + list(self.cdf)
+            plot = ax.plot(self.bins, y, **kw)
+        else:
+            mask = height>0
+            plot = ax.bar(self.bins[:-1][mask], height[mask], self.bin_width[mask], align='edge', **kw)
         ax.ylabel(ylabel)
         if( self.log ):
             ax.xscale("log")
