@@ -362,6 +362,28 @@ def mjd_to_year(mjd):
     days_per_years = 365.2422
     return (np.array(mjd)-mjd_2010_01_01)/days_per_years + 2010
 
+def toYearFraction(date=date):
+    """
+    Convert a datetime to the year (in float format)
+
+    :type   date: datetime.datetime
+    :param  date: date to be converted
+    """
+    dt = datetime.datetime
+    def sinceEpoch(date): # returns seconds since epoch
+        return time.mktime(date.timetuple())
+    s = sinceEpoch
+
+    year = date.year
+    startOfThisYear = dt(year=year, month=1, day=1)
+    startOfNextYear = dt(year=year+1, month=1, day=1)
+
+    yearElapsed = s(date) - s(startOfThisYear)
+    yearDuration = s(startOfNextYear) - s(startOfThisYear)
+    fraction = yearElapsed/yearDuration
+
+    return date.year + fraction
+
 def Track_for_loop_progress(iterator, len_iterator, message=None):
     """
     Track the progress of a for loop using print statements
