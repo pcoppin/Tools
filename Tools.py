@@ -369,6 +369,7 @@ def toYearFraction(date):
     :type   date: datetime.datetime
     :param  date: date to be converted
     """
+    import datetime, time
     dt = datetime.datetime
     def sinceEpoch(date): # returns seconds since epoch
         return time.mktime(date.timetuple())
