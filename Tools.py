@@ -496,8 +496,9 @@ class Hist(object):
         self.pdf = self.hist_normed/self.bin_width
         self.cdf = self.hist_normed.cumsum()
         self.binomial_uncertainty = []
-        bins_ratio = self.bins[1:]/self.bins[:-1]
-        self.log = all(np.isclose(bins_ratio,bins_ratio[0]))
+        if( all(self.bins>0) ):
+            bins_ratio = self.bins[1:]/self.bins[:-1]
+            self.log = all(np.isclose(bins_ratio,bins_ratio[0]))
 
     def Add_counts(self, idx, counts):
         self.hist[idx] = self.hist[idx] + counts
