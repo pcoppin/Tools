@@ -499,6 +499,8 @@ class Hist(object):
         if( all(self.bins>0) ):
             bins_ratio = self.bins[1:]/self.bins[:-1]
             self.log = all(np.isclose(bins_ratio,bins_ratio[0]))
+        else:
+            self.log = False
 
     def Add_counts(self, idx, counts):
         self.hist[idx] = self.hist[idx] + counts
