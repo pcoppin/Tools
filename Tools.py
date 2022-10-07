@@ -22,6 +22,9 @@ mpl_style_file    = Code_folder + "/Tools/matplotlib_style"
 
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:pink', 'tab:grey']
 
+def logspace(min_range, max_range, counts):
+    return np.logspace(np.log10(min_range), np.log10(max_range), counts)
+
 def Reduced_chi_squared(function, x_data, y_data, y_error, params):
     from scipy.stats import chi2
     if(len(x_data)!=len(y_data)):
