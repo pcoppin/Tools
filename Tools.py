@@ -610,14 +610,16 @@ Proton_filelist = ["allProton-v6r0p10_10GeV_100GeV_FTFP-p2.npy",\
                    "allProton-v6r0p10_100GeV_1TeV_FTFP-p1.npy",\
                    "allProton-v6r0p10_1TeV_10TeV_FTFP.npy",\
                    "allProton-v6r0p10_10TeV_100TeV_FTFP.npy"]
-Helium_filelist = ["allHe4-v6r0p10_10GeV_100GeV_FTFP.npy",
-                   "allHe4-v6r0p10_100GeV_1TeV_FTFP.npy",
-                   "allHe4-v6r0p10_1TeV_10TeV-FTFP.npy",
-                   "allHe4-v6r0p10_10TeV_100TeV-FTFP.npy"]
+Helium_filelist = ["allHe4-v6r0p10_10GeV_100GeV_FTFP.npy",\
+                   "allHe4-v6r0p10_100GeV_1TeV_FTFP.npy",\
+                   "allHe4-v6r0p10_1TeV_10TeV-FTFP.npy",\
+                   "allHe4-v6r0p10_10TeV_100TeV-FTFP.npy",\
+                   "allHe4-v6r0p10_100TeV_500TeV-EPOSLHC"]
 HeliumFluka_filelist = ["allHe4-v6r0p10_10GeV_100GeV-FLUKA.npy",\
                         "allHe4-v6r0p10_100GeV_1TeV-FLUKA.npy",\
                         "allHe4-v6r0p10_1TeV_10TeV-FLUKA.npy",\
-                        "allHe4-v6r0p10_10TeV_100TeV-FLUKA-p1.npy"]
+                        "allHe4-v6r0p10_10TeV_100TeV-FLUKA-p1.npy",\
+                        "allHe4-v6r0p10_100TeV_500TeV-FLUKA"]
 
 Proton80_filelist = ["Proton_10GeV_to_10TeV_80perc.npy",\
                      "Proton_10TeV_to_100TeV_80perc.npy"]
