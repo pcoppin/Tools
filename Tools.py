@@ -560,5 +560,78 @@ class Hist(object):
         return ax.errorbar(self.bin_center, height, list(zip(*uncertainty)), linestyle=linestyle, fmt=fmt, markersize=markersize, **kw)
 
 
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+### DAMPE stuff
+
+def Combine_npy_dict(Filelist=[], keys=None,\
+                     npy_dir="/dpnc/beegfs/users/coppinp/Simu_vary_cross_section_with_Geant4/Analysis/npy_files/"):
+    data = {}
+    for f in Filelist:
+        print(f)
+        data_i = np.load(npy_dir+f, allow_pickle=True).item()
+        N_i = len(data_i['E_p'])
+        weight = (1.0/N_i) * np.ones(N_i)
+        
+        if( "10GeV_to_10TeV" in f ):
+            weight *= 3
+        
+        data_i["weight"] = weight
+        # Use all keys if not specified
+        if( keys is None ):
+            keys = data_i.keys()
+        # Put data in dictionary
+        for key in keys:
+            if( key not in data ):
+                data[key] = data_i[key]
+            else:
+                data[key] = np.concatenate([data[key],data_i[key]])
+    for key in ["E_p","E_total_BGO"]:
+        if( key in data ):
+            data[key] = 1e-3 * data[key]
+    
+    w = data['HE_trigger'] * data["Skimmed"]
+    for key in data:
+        if( key not in ["E_primary_non_trig","E_primary"] ):
+            data[key] = data[key][w]
+    return data
+
+Proton_filelist = ["allProton-v6r0p10_10GeV_100GeV_FTFP-p2.npy",\
+                   "allProton-v6r0p10_100GeV_1TeV_FTFP-p1.npy",\
+                   "allProton-v6r0p10_1TeV_10TeV_FTFP.npy",\
+                   "allProton-v6r0p10_10TeV_100TeV_FTFP.npy"]
+Helium_filelist = ["allHe4-v6r0p10_10GeV_100GeV_FTFP.npy",
+                   "allHe4-v6r0p10_100GeV_1TeV_FTFP.npy",
+                   "allHe4-v6r0p10_1TeV_10TeV-FTFP.npy",
+                   "allHe4-v6r0p10_10TeV_100TeV-FTFP.npy"]
+HeliumFluka_filelist = ["allHe4-v6r0p10_10GeV_100GeV-FLUKA.npy",\
+                        "allHe4-v6r0p10_100GeV_1TeV-FLUKA.npy",\
+                        "allHe4-v6r0p10_1TeV_10TeV-FLUKA.npy",\
+                        "allHe4-v6r0p10_10TeV_100TeV-FLUKA-p1.npy"]
+
+Proton80_filelist = ["Proton_10GeV_to_10TeV_80perc.npy",\
+                     "Proton_10TeV_to_100TeV_80perc.npy"]
+Proton120_filelist = ["Proton_10GeV_to_10TeV_120perc.npy",\
+                      "Proton_10TeV_to_100TeV_120perc.npy"]
+
+Helium80_filelist = ["Helium_10GeV_to_10TeV_80perc.npy",\
+                     "Helium_10TeV_to_100TeV_80perc.npy"]
+Helium120_filelist = ["Helium_10GeV_to_10TeV_120perc.npy",\
+                      "Helium_10TeV_to_100TeV_120perc.npy"]
+
+sample_sets = {"Proton": Proton_filelist, "Helium": Helium_filelist, "HeliumFluka": HeliumFluka_filelist,\
+               "Proton120": Proton120_filelist, "Proton80": Proton80_filelist,\
+               "Helium120": Proton120_filelist, "Helium80": Helium80_filelist}
+    
 
 
