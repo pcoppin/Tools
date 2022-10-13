@@ -633,7 +633,7 @@ Helium120_filelist = ["Helium_10GeV_to_10TeV_120perc.npy",\
 
 sample_sets = {"Proton": Proton_filelist, "Helium": Helium_filelist, "HeliumFluka": HeliumFluka_filelist,\
                "Proton120": Proton120_filelist, "Proton80": Proton80_filelist,\
-               "Helium120": Proton120_filelist, "Helium80": Helium80_filelist}
+               "Helium120": Helium120_filelist, "Helium80": Helium80_filelist}
     
 
 
