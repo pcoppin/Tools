@@ -579,7 +579,7 @@ def Combine_npy_dict(Filelist=[], keys=None,\
     data = {}
     for f in Filelist:
         print(f)
-        data_i = np.load(npy_dir+f, allow_pickle=True).item()
+        data_i = np.load(npy_dir+f, allow_pickle=True, encoding="latin1").item()
         N_i = len(data_i['E_p'])
         weight = (1.0/N_i) * np.ones(N_i)
         
@@ -614,12 +614,12 @@ Helium_filelist = ["allHe4-v6r0p10_10GeV_100GeV_FTFP.npy",\
                    "allHe4-v6r0p10_100GeV_1TeV_FTFP.npy",\
                    "allHe4-v6r0p10_1TeV_10TeV-FTFP.npy",\
                    "allHe4-v6r0p10_10TeV_100TeV-FTFP.npy",\
-                   "allHe4-v6r0p10_100TeV_500TeV-EPOSLHC"]
+                   "allHe4-v6r0p10_100TeV_500TeV-EPOSLHC.npy"]
 HeliumFluka_filelist = ["allHe4-v6r0p10_10GeV_100GeV-FLUKA.npy",\
                         "allHe4-v6r0p10_100GeV_1TeV-FLUKA.npy",\
                         "allHe4-v6r0p10_1TeV_10TeV-FLUKA.npy",\
                         "allHe4-v6r0p10_10TeV_100TeV-FLUKA-p1.npy",\
-                        "allHe4-v6r0p10_100TeV_500TeV-FLUKA"]
+                        "allHe4-v6r0p10_100TeV_500TeV-FLUKA.npy"]
 
 Proton80_filelist = ["Proton_10GeV_to_10TeV_80perc.npy",\
                      "Proton_10TeV_to_100TeV_80perc.npy"]
