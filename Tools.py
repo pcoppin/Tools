@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import os
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -15,10 +16,12 @@ import matplotlib.pyplot as plt
 #sys.path.insert(0, Code_folder+"/Tools")
 #import Tools test
 
+pwd = os.path.dirname(os.path.realpath(__file__)) + "/"
+
 sr_to_deg2        = (180/np.pi)**2
 Sky_in_square_deg = 4*np.pi * sr_to_deg2
 Code_folder       = "/mnt/2690D37B90D35043/PhD/Code"
-mpl_style_file    = Code_folder + "/Tools/matplotlib_style"
+mpl_style_file    = pwd + "matplotlib_style"
 
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:pink', 'tab:grey']
 
