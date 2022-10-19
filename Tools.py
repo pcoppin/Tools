@@ -255,6 +255,50 @@ def Generate_uniform_points_on_sphere(N, ra_dec=False, degrees=False):
     else:
         return theta, phi
 
+def Moyal(x, *p):
+    '''
+    A good enough approximation to the Landau function
+    that allows to estimate the MPV and sigma of the peak
+    '''
+    xt = (x - p[1]) / p[2]
+    f = np.exp(-(xt + np.exp(-xt)) / 2)
+    return p[0] * f / f.max()
+
+def Landau(x, *p):
+    '''
+    Exact landau distribution (numerically integrated)
+    I find that dt=0.1 and infinity=100 gives good enough approximation
+    '''
+    xt = (x - p[0]) / p[1]
+    tt = np.linspace(0.0001, 100, 2000) # Avoid zero
+    dt = tt[1]-tt[0]
+    t = np.meshgrid(np.ones(len(x)), tt)[1]
+    A = (1/np.pi*np.exp(-t * np.log(t) - xt * t) * np.sin(np.pi * t)).sum(axis=0)
+    A[x < p[0] - 3 * p[1]] = 0.
+    #A[A<0] = 0.0
+    #A[np.isnan(A)] = 0.0
+    return A * dt / p[1]#/ (A * dt).max()
+
+def Gauss(x, *p):
+    xt = (x - p[0]) / p[1]
+    norm = 1/np.sqrt(2*np.pi*p[1]**2)
+    return norm*np.exp(-0.5 * xt**2)
+
+def Langau(x, *p):
+    '''
+    Landau distribution convolved with gaussian noise
+    '''
+    tau_arr = np.linspace(x.min() - x.mean(), 
+                          x.max() - x.mean(), len(x))
+    c = np.convolve(Landau(x, p[0], p[1]),
+                    Gauss(tau_arr, 0, p[2]))
+    xnew = np.linspace(x.min() + tau_arr.min(),
+                       x.max() + tau_arr.max(),
+                       len(x) + len(tau_arr) - 1)
+    f = np.interp(x, xnew, c)
+    f = f * (x[1] - x[0])
+    return f
+
 def kent(s, dpsi):
     """
     Compute the value of the Kent distribution
@@ -577,9 +621,12 @@ class Hist(object):
     
 ### DAMPE stuff
 
-def Combine_npy_dict(Filelist=[], keys=None,\
+def Combine_npy_dict(Filelist=[], keys=None, filters=['HE_trigger', 'Skimmed'],\
                      npy_dir="/dpnc/beegfs/users/coppinp/Simu_vary_cross_section_with_Geant4/Analysis/npy_files/"):
     data = {}
+    for key in filters:
+        if( key not in keys ):
+            keys.append( key )
     for f in Filelist:
         print(f)
         data_i = np.load(npy_dir+f, allow_pickle=True, encoding="latin1").item()
@@ -603,7 +650,12 @@ def Combine_npy_dict(Filelist=[], keys=None,\
         if( key in data ):
             data[key] = 1e-3 * data[key]
     
-    w = data['HE_trigger'] * data["Skimmed"]
+    # w = data['HE_trigger'] * data["Skimmed"]
+    random_key = list(data.keys())[0]
+    w = np.ones_like(data[random_key], dtype=bool)
+    for key in filters:
+        w = w * data[key]
+
     for key in data:
         if( key not in ["E_primary_non_trig","E_primary"] ):
             data[key] = data[key][w]
