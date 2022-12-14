@@ -638,7 +638,7 @@ def Reweight_events(z_stop, corr, nbins=1000, full_return=False):
     """
     bins = np.linspace(min(z_stop), max(z_stop), nbins+1)
 
-    h = Tools.Hist(z_stop, bins=bins)
+    h = Hist(z_stop, bins=bins)
     cdf_normal = h.cdf
     cdf_rescaled = 1 - np.power(1-cdf_normal, corr)
 
