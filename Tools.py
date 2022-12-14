@@ -115,10 +115,10 @@ def Efficiency_for_binomial_process(N,k,probability_content=0.683):
         from scipy.stats import norm
         sigma_gauss = norm.isf( 0.5*(1-probability_content) )
         eff = float(k)/N
-        sigma = sigma_gauss * np.sqrt( k/np.power(N,2) + np.power(k,2)/np.power(N,3) )
-        l_err = min(sigma,eff)
-        r_err = min(sigma,1-eff)
-        return np.array([eff, l_err, r_err])
+        p = lambda x,y : np.power(x,y,dtype=float) # Numpy int's overflow without warning...
+        sigma = sigma_gauss * np.sqrt( k/p(N,2) + p(k,2)/p(N,3) )
+        if( (eff>sigma) and ((1-eff)>sigma) ):
+            return np.array([eff, sigma, sigma])
     
     from decimal import Decimal
     if( (probability_content>=1) or (probability_content<=0) ):
@@ -605,40 +605,92 @@ class Hist(object):
             height = self.pdf
             uncertainty = [uncertainty/self.sum/bin_width for (uncertainty,bin_width) in zip(self.binomial_uncertainty,self.bin_width)]
         return ax.errorbar(self.bin_center, height, list(zip(*uncertainty)), linestyle=linestyle, fmt=fmt, markersize=markersize, **kw)
+    
+    
+    
 
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     
     
 ### DAMPE stuff
 
-def Combine_npy_dict(Filelist=[], keys=None, filters=['HE_trigger', 'Skimmed'],\
+
+
+
+def PSD_charge_fit(x, a, b, c, d):
+    # Sum of a linear function and an exponential
+    # Similar to Misha, he uses a + exp(b * x + c)
+    return np.exp(a*(x-b)) + c + d*x
+
+def Reweight_events(z_stop, corr, nbins=1000, full_return=False):
+    """
+    Generate weights for MC events to make it such that the amount of events that interact
+    at any given depth (z-value) corresponds to what you would expect for simulation in
+    which the cross section is rescaled
+    
+    :type   z_stop: Array
+    :param  z_stop: List containing the 'z_stop' values of the simulated events
+
+    :type   corr: Float
+    :param  corr: Factor by which the cross section is rescaled, i.e. 1.2 corresponds to a 20% increase
+    
+    :type   nbins: Int
+    :param  nbins: Number of bins used to divide the z-range
+    """
+    bins = np.linspace(min(z_stop), max(z_stop), nbins+1)
+
+    h = Tools.Hist(z_stop, bins=bins)
+    cdf_normal = h.cdf
+    cdf_rescaled = 1 - np.power(1-cdf_normal, corr)
+
+    ### These pdf values have as bins the original bins minus the first one
+    print( len(np.diff(bins)), len(cdf_normal) )
+
+    pdf_normal = np.diff(cdf_normal)/np.diff(bins[1:])
+    pdf_rescaled = np.diff(cdf_rescaled)/np.diff(bins[1:])
+    
+    ### weights: Weight of events that fall in each of the bins
+    weights = pdf_rescaled / np.maximum(pdf_normal,1e-20)
+
+    idx = np.digitize( z_stop, bins=bins[1:] )
+    ### 0 is left of the first bin, len(bins) is right of the last bin
+    ###    Make sure we get a correct value for those edge cases
+    idx = np.maximum(0, idx-1)
+    idx = np.minimum(len(weights)-1, idx)
+
+    weight_events = weights[idx]
+    
+    if( full_return ):
+        return weight_events, h, pdf_normal, pdf_rescaled, cdf_normal, cdf_rescaled, weights, bins[1:]
+    else:
+        return weight_events
+
+def Combine_npy_dict(Filelist=[], keys=[], filters=['HE_trigger', 'Skimmed'],\
                      npy_dir="/dpnc/beegfs/users/coppinp/Simu_vary_cross_section_with_Geant4/Analysis/npy_files/"):
+    import copy
+    keys = copy.deepcopy(keys)
     data = {}
     for key in filters:
-        if( key not in keys ):
+        if( key=="MLcontainment" ):
+            ToAdd = ['STKInterceptY', 'STKInterceptX','STKSlopeX', 'STKSlopeY']
+            for key_ToAdd in ToAdd:
+                keys.append( key_ToAdd ) 
+        elif( key=="NonZeroPSD" ):
+            keys.append( "PSD_charge" )
+        elif( key not in keys ):
             keys.append( key )
+    keys = np.unique(keys)
+
     for f in Filelist:
-        print(f)
+        #print(f)
         data_i = np.load(npy_dir+f, allow_pickle=True, encoding="latin1").item()
         N_i = len(data_i['E_p'])
         weight = (1.0/N_i) * np.ones(N_i)
-        
         if( "10GeV_to_10TeV" in f ):
+            # Weight normally 1 per decade, so total weight is 3 if adding file that spans 3 decades
             weight *= 3
-        
         data_i["weight"] = weight
         # Use all keys if not specified
-        if( keys is None ):
+        if( len(keys)==0 ):
             keys = data_i.keys()
         # Put data in dictionary
         for key in keys:
@@ -646,19 +698,33 @@ def Combine_npy_dict(Filelist=[], keys=None, filters=['HE_trigger', 'Skimmed'],\
                 data[key] = data_i[key]
             else:
                 data[key] = np.concatenate([data[key],data_i[key]])
-    for key in ["E_p","E_total_BGO"]:
+    for key in ["E_p","E_total_BGO", "E_total_PSD"]:
         if( key in data ):
             data[key] = 1e-3 * data[key]
     
     # w = data['HE_trigger'] * data["Skimmed"]
-    random_key = list(data.keys())[0]
-    w = np.ones_like(data[random_key], dtype=bool)
+    w = np.ones_like(data["E_total_BGO"], dtype=bool)
     for key in filters:
-        w = w * data[key]
-
+        if( key=="MLcontainment" ):
+            BGO_TopZ, BGO_BottomZ = 46., 448.
+            cut = 280
+            topX = data['STKSlopeX'] * BGO_TopZ + data['STKInterceptX']
+            topY = data['STKSlopeY'] * BGO_TopZ + data['STKInterceptY']
+            bottomX = data['STKSlopeX'] * BGO_BottomZ + data['STKInterceptX']
+            bottomY = data['STKSlopeY'] * BGO_BottomZ + data['STKInterceptY']
+            ml_bgo_fid = (abs(topX)<cut) * (abs(topY)<cut) * (abs(bottomX)<cut) * (abs(bottomY)<cut)
+            w = w * ml_bgo_fid
+        elif( key=="NonZeroPSD" ):
+            w = w * np.sum(data['PSD_charge']>0.1, axis=1, dtype=np.bool)
+        else:
+            w = w * data[key]
     for key in data:
         if( key not in ["E_primary_non_trig","E_primary"] ):
             data[key] = data[key][w]
+
+    if( "PSD_charge" in data ):
+        data["PSD_charge"] = np.maximum( data['PSD_charge'], 0.0 )
+
     return data
 
 Proton_filelist = ["allProton-v6r0p10_10GeV_100GeV_FTFP-p2.npy",\
@@ -675,7 +741,7 @@ HeliumFluka_filelist = ["allHe4-v6r0p10_10GeV_100GeV-FLUKA.npy",\
                         "allHe4-v6r0p10_1TeV_10TeV-FLUKA.npy",\
                         "allHe4-v6r0p10_10TeV_100TeV-FLUKA-p1.npy",\
                         "allHe4-v6r0p10_100TeV_500TeV-FLUKA.npy"]
-
+HeliumFullSky_filelist = ["Helium_10GeV_to_10TeV_FullSky.npy"]
 Proton80_filelist = ["Proton_10GeV_to_10TeV_80perc.npy",\
                      "Proton_10TeV_to_100TeV_80perc.npy"]
 Proton120_filelist = ["Proton_10GeV_to_10TeV_120perc.npy",\
@@ -685,10 +751,13 @@ Helium80_filelist = ["Helium_10GeV_to_10TeV_80perc.npy",\
                      "Helium_10TeV_to_100TeV_80perc.npy"]
 Helium120_filelist = ["Helium_10GeV_to_10TeV_120perc.npy",\
                       "Helium_10TeV_to_100TeV_120perc.npy"]
+Helium200_filelist = ["Helium_10GeV_to_10TeV_200perc.npy",\
+                      "Helium_10TeV_to_100TeV_200perc.npy"]
 
 sample_sets = {"Proton": Proton_filelist, "Helium": Helium_filelist, "HeliumFluka": HeliumFluka_filelist,\
                "Proton120": Proton120_filelist, "Proton80": Proton80_filelist,\
-               "Helium120": Helium120_filelist, "Helium80": Helium80_filelist}
+               "Helium120": Helium120_filelist, "Helium80": Helium80_filelist,\
+               "Helium200": Helium200_filelist, "HeliumFullSky": HeliumFullSky_filelist}
     
 
 

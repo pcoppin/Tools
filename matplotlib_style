@@ -15,6 +15,8 @@ ytick.labelsize      : 24
 axes.titlesize       : 36
 lines.linewidth      : 2.5
 
+errorbar.capsize     : 5
+
 text.usetex          : True
 
 # colors        = ["red","blue","green",'brown','purple']
