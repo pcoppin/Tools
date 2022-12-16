@@ -643,8 +643,6 @@ def Reweight_events(z_stop, corr, nbins=1000, full_return=False):
     cdf_rescaled = 1 - np.power(1-cdf_normal, corr)
 
     ### These pdf values have as bins the original bins minus the first one
-    print( len(np.diff(bins)), len(cdf_normal) )
-
     pdf_normal = np.diff(cdf_normal)/np.diff(bins[1:])
     pdf_rescaled = np.diff(cdf_rescaled)/np.diff(bins[1:])
     
