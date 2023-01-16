@@ -544,7 +544,7 @@ class Hist(object):
         self.hist_density = self.hist/self.bin_width
         self.hist_normed = self.hist/np.float(self.sum)
         self.pdf = self.hist_normed/self.bin_width
-        self.cdf = self.hist_normed.cumsum()
+        self.cdf = np.minimum(1,self.hist_normed.cumsum())
         self.binomial_uncertainty = []
         if( all(self.bins>0) ):
             bins_ratio = self.bins[1:]/self.bins[:-1]
@@ -614,14 +614,12 @@ class Hist(object):
 ### DAMPE stuff
 
 
-
-
 def PSD_charge_fit(x, a, b, c, d):
     # Sum of a linear function and an exponential
     # Similar to Misha, he uses a + exp(b * x + c)
     return np.exp(a*(x-b)) + c + d*x
 
-def Reweight_events(z_stop, corr, nbins=1000, full_return=False):
+def Reweight_events(z_stop, corr, nbins=1000, full_return=False, z_rightmost=480, z_leftmost=-380):
     """
     Generate weights for MC events to make it such that the amount of events that interact
     at any given depth (z-value) corresponds to what you would expect for simulation in
@@ -636,9 +634,19 @@ def Reweight_events(z_stop, corr, nbins=1000, full_return=False):
     :type   nbins: Int
     :param  nbins: Number of bins used to divide the z-range
     """
-    bins = np.linspace(min(z_stop), max(z_stop), nbins+1)
-
+    from scipy.interpolate import interp1d
+    # bins = np.linspace(min(z_stop), max(z_stop), nbins+1)
+    # h = Hist(z_stop, bins=bins)
+    
+    
+    
+#     bins = np.linspace(min(z_stop), z_rightmost, nbins+1)
+    bins = np.linspace(z_leftmost, z_rightmost, nbins+1)
     h = Hist(z_stop, bins=bins)
+    h.Add_counts(-1, np.sum(z_stop>z_rightmost))
+    h.Add_counts(0, np.sum(z_stop<z_leftmost))
+    
+    
     cdf_normal = h.cdf
     cdf_rescaled = 1 - np.power(1-cdf_normal, corr)
 
@@ -648,7 +656,14 @@ def Reweight_events(z_stop, corr, nbins=1000, full_return=False):
     
     ### weights: Weight of events that fall in each of the bins
     weights = pdf_rescaled / np.maximum(pdf_normal,1e-20)
-
+    
+    
+    ### interpolate between wrt nearest values if bin has no particles stopping in it
+    w = weights==0
+    weights[w] = interp1d(np.arange(len(weights))[~w], weights[~w], kind='nearest', fill_value='extrapolate')( np.where(w)[0] )
+    
+    
+    
     idx = np.digitize( z_stop, bins=bins[1:] )
     ### 0 is left of the first bin, len(bins) is right of the last bin
     ###    Make sure we get a correct value for those edge cases
