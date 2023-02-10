@@ -685,16 +685,21 @@ def Reweight_events(z_stop, corr, nbins=1000, z_leftmost=-380, z_rightmost=480):
     return [h, pdf_normal, pdf_rescaled, cdf_normal, cdf_rescaled, weights, bins, bin_center]
 
 
-def Combine_npy_dict(Filelist=[], keys=[], filters=['HE_trigger', 'Skimmed'],\
+def Combine_npy_dict(Filelist=[], keys=[],\
+                     filters=['HE_trigger', 'Skimmed','NonZeroPSD','MLcontainmentBGO','MLcontainmentSTK'],\
                      npy_dir="/dpnc/beegfs/users/coppinp/Simu_vary_cross_section_with_Geant4/Analysis/npy_files/"):
     import copy
     keys = copy.deepcopy(keys)
     data = {}
     for key in filters:
-        if( key=="MLcontainment" ):
+        if( key=="MLcontainmentBGO" ):
             ToAdd = ['BGOInterceptY', 'BGOInterceptX','BGOSlopeX', 'BGOSlopeY']
             for key_ToAdd in ToAdd:
-                keys.append( key_ToAdd ) 
+                keys.append( key_ToAdd )
+        elif( key=="MLcontainmentSTK" ):
+            ToAdd = ['STKInterceptY', 'STKInterceptX','STKSlopeX', 'STKSlopeY']
+            for key_ToAdd in ToAdd:
+                keys.append( key_ToAdd )
         elif( key=="NonZeroPSD" ):
             keys.append( "PSD_charge" )
         elif( key not in keys ):
@@ -709,6 +714,8 @@ def Combine_npy_dict(Filelist=[], keys=[], filters=['HE_trigger', 'Skimmed'],\
         if( "10GeV_to_10TeV" in f ):
             # Weight normally 1 per decade, so total weight is 3 if adding file that spans 3 decades
             weight *= 3
+        if( "100TeV_500TeV" in f ):
+            weight *= np.log10(5)
         data_i["weight"] = weight
         # Use all keys if not specified
         if( len(keys)==0 ):
@@ -726,7 +733,8 @@ def Combine_npy_dict(Filelist=[], keys=[], filters=['HE_trigger', 'Skimmed'],\
     # w = data['HE_trigger'] * data["Skimmed"]
     w = np.ones_like(data["E_total_BGO"], dtype=bool)
     for key in filters:
-        if( key=="MLcontainment" ):
+        if( key=="MLcontainmentBGO" ):
+            # BGO prediction fiducially contained in BGO
             BGO_TopZ, BGO_BottomZ = 46., 448.
             cut = 280
             topX = data['BGOSlopeX'] * BGO_TopZ + data['BGOInterceptX']
@@ -735,13 +743,33 @@ def Combine_npy_dict(Filelist=[], keys=[], filters=['HE_trigger', 'Skimmed'],\
             bottomY = data['BGOSlopeY'] * BGO_BottomZ + data['BGOInterceptY']
             ml_bgo_fid = (abs(topX)<cut) * (abs(topY)<cut) * (abs(bottomX)<cut) * (abs(bottomY)<cut)
             w = w * ml_bgo_fid
+        elif( key=="MLcontainmentSTK" ):
+            # STK prediction fiducially contained within PSD to BGO
+            TopZ, BottomZ = -325, 448.
+            cutTop, cutBottom = 440, 280
+            topX = data['STKSlopeX'] * TopZ + data['STKInterceptX']
+            topY = data['STKSlopeY'] * TopZ + data['STKInterceptY']
+            bottomX = data['STKSlopeX'] * BottomZ + data['STKInterceptX']
+            bottomY = data['STKSlopeY'] * BottomZ + data['STKInterceptY']
+            ml_stk_fid = (abs(topX)<cutTop) * (abs(topY)<cutTop) * (abs(bottomX)<cutBottom) * (abs(bottomY)<cutBottom)
+            TopZ = 44.
+            cutTop = 280.
+            topX = data['STKSlopeX'] * TopZ + data['STKInterceptX']
+            topY = data['STKSlopeY'] * TopZ + data['STKInterceptY']
+            ml_stk_fid = ml_stk_fid* (abs(topX)<cutTop) * (abs(topY)<cutTop)
+
+            w = w * ml_stk_fid
         elif( key=="NonZeroPSD" ):
             w = w * np.sum(data['PSD_charge']>0.1, axis=1, dtype=bool)
         else:
             w = w * data[key]
     for key in data:
-        if( key not in ["E_primary_non_trig","E_primary"] ):
-            data[key] = data[key][w]
+        if( key=="E_primary_non_trig" ):
+            continue
+        elif( key=="E_p"):
+            data['E_primary_non_trig'] = np.concatenate( [data['E_primary_non_trig'],data['E_p'][~w]] )
+        data[key] = data[key][w]
+    
 
     if( "PSD_charge" in data ):
         data["PSD_charge"] = np.maximum( data['PSD_charge'], 0.0 )
