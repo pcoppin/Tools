@@ -560,7 +560,7 @@ class Hist(object):
         for N_i in self.hist:
             self.binomial_uncertainty.append( self.sum*Efficiency_for_binomial_process(self.sum, int(N_i), probability_content)[1:] )
     
-    def plot(self, type="hist", ax=plt, **kw):
+    def plot(self, type="hist", ax=plt, step=False, **kw):
         if( type=="hist" ):
             height = self.hist
             ylabel = "Counts"
@@ -586,7 +586,12 @@ class Hist(object):
         
         if( type=="cdf" ):
             y = [0] + list(self.cdf)
-            plot = ax.plot(self.bins, y, **kw)
+            plot = ax.step(self.bins, y, where='post', **kw)
+        
+        elif( step ):
+            y = list(height) + [height[-1]]
+            plot = ax.step(self.bins, y, where='post', **kw)
+            return plot
         else:
             mask = height>0
             plot = ax.bar(self.bins[:-1][mask], height[mask], self.bin_width[mask], align='edge', **kw)
