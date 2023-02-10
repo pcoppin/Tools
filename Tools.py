@@ -542,7 +542,7 @@ class Hist(object):
     def set_vars(self):
         self.sum = np.sum(self.hist)
         self.hist_density = self.hist/self.bin_width
-        self.hist_normed = self.hist/np.float(self.sum)
+        self.hist_normed = self.hist/float(self.sum)
         self.pdf = self.hist_normed/self.bin_width
         self.cdf = np.minimum(1,self.hist_normed.cumsum())
         self.binomial_uncertainty = []
@@ -624,7 +624,7 @@ def PSD_charge_fit(x, a, b, c, d):
     # Similar to Misha, he uses a + exp(b * x + c)
     return np.exp(a*(x-b)) + c + d*x
 
-def Reweight_events(z_stop, corr, nbins=1000, full_return=False, z_rightmost=480, z_leftmost=-380):
+def Reweight_events(z_stop, corr, nbins=1000, z_leftmost=-380, z_rightmost=480):
     """
     Generate weights for MC events to make it such that the amount of events that interact
     at any given depth (z-value) corresponds to what you would expect for simulation in
@@ -637,50 +637,58 @@ def Reweight_events(z_stop, corr, nbins=1000, full_return=False, z_rightmost=480
     :param  corr: Factor by which the cross section is rescaled, i.e. 1.2 corresponds to a 20% increase
     
     :type   nbins: Int
-    :param  nbins: Number of bins used to divide the z-range
+    :param  nbins: Number of bins used to divide the z-range of the detector
+
+    :type   z_leftmost: float
+    :param  z_leftmost: Defines the z-range over which the cross section will be scaled
+    
+    :type   z_rightmost: float
+    :param  z_rightmost: Defines the z-range over which the cross section will be scaled
     """
     from scipy.interpolate import interp1d
-    # bins = np.linspace(min(z_stop), max(z_stop), nbins+1)
-    # h = Hist(z_stop, bins=bins)
     
-    
-    
-#     bins = np.linspace(min(z_stop), z_rightmost, nbins+1)
-    bins = np.linspace(z_leftmost, z_rightmost, nbins+1)
-    h = Hist(z_stop, bins=bins)
+    ### Bins spam the detector region from the top of PSD (z=-380) to the bottom of BGO (z=450)
+    bins = np.linspace(-380, 450, nbins+1)
+    bin_center = bins[:-1] + 0.5*np.diff(bins)
+
+    ### 'w': bins (indexes) for which the bin center falls inside the z-range
+    w = (bin_center>z_leftmost) * (bin_center<z_rightmost)
+    ### We also calculate the indexes of the corresponding bin-edges
+    w_bins = np.zeros(nbins+1, dtype=bool)
+    w_bins[np.where(w)[0]] = True
+    w_bins[np.where(w)[0][-1]+1] =  True
+
+    ### Put everything in z-range into a histogram
+    h = Hist(z_stop, bins=bins[w_bins])
+    ### Things to the right of the z-range get put in the last bin. We do this because the weight of
+    ### the remaining events is affected by the fact that more (or less events) interacted beforehand.
     h.Add_counts(-1, np.sum(z_stop>z_rightmost))
-    h.Add_counts(0, np.sum(z_stop<z_leftmost))
     
-    
-    cdf_normal = h.cdf
+    cdf_normal = np.array([0] + list(h.cdf))
     cdf_rescaled = 1 - np.power(1-cdf_normal, corr)
 
-    ### These pdf values have as bins the original bins minus the first one
-    pdf_normal = np.diff(cdf_normal)/np.diff(bins[1:])
-    pdf_rescaled = np.diff(cdf_rescaled)/np.diff(bins[1:])
-    
-    ### weights: Weight of events that fall in each of the bins
-    weights = pdf_rescaled / np.maximum(pdf_normal,1e-20)
-    
-    
-    ### interpolate between wrt nearest values if bin has no particles stopping in it
-    w = weights==0
-    weights[w] = interp1d(np.arange(len(weights))[~w], weights[~w], kind='nearest', fill_value='extrapolate')( np.where(w)[0] )
-    
-    
-    
-    idx = np.digitize( z_stop, bins=bins[1:] )
-    ### 0 is left of the first bin, len(bins) is right of the last bin
-    ###    Make sure we get a correct value for those edge cases
-    idx = np.maximum(0, idx-1)
-    idx = np.minimum(len(weights)-1, idx)
 
-    weight_events = weights[idx]
+    ### These pdf values have as bins
+    pdf_normal = np.diff(cdf_normal)/np.diff(h.bins)
+    pdf_rescaled = np.diff(cdf_rescaled)/np.diff(h.bins)
     
-    if( full_return ):
-        return weight_events, h, pdf_normal, pdf_rescaled, cdf_normal, cdf_rescaled, weights, bins[1:]
-    else:
-        return weight_events
+    ### The weights (number of interacting events) corresponds to the ratio of the PDFs
+    weights = np.ones(nbins)
+    weights[w] = pdf_rescaled / np.maximum(pdf_normal,1e-20)
+
+    ### In bins in the z-range, in which no particle stopped, we set the weight
+    ###    equal to that in the nearest bin
+    w_zero = (weights==0)
+    w_interp = ~w_zero[:]
+    w_interp[np.where(w)[0][-1]] = False
+    weights[w_zero*w] = interp1d(np.arange(len(weights))[w*w_interp], weights[w*w_interp], kind='nearest', fill_value='extrapolate')( np.where(w_zero*w)[0] )
+    
+    ### All bins to the right of the z-range now get the same re-scaled value as the weight of the last bin
+    w_right = bin_center>z_rightmost
+    weights[w_right] = weights[w][-1]
+
+    return [h, pdf_normal, pdf_rescaled, cdf_normal, cdf_rescaled, weights, bins, bin_center]
+
 
 def Combine_npy_dict(Filelist=[], keys=[], filters=['HE_trigger', 'Skimmed'],\
                      npy_dir="/dpnc/beegfs/users/coppinp/Simu_vary_cross_section_with_Geant4/Analysis/npy_files/"):
@@ -689,7 +697,7 @@ def Combine_npy_dict(Filelist=[], keys=[], filters=['HE_trigger', 'Skimmed'],\
     data = {}
     for key in filters:
         if( key=="MLcontainment" ):
-            ToAdd = ['STKInterceptY', 'STKInterceptX','STKSlopeX', 'STKSlopeY']
+            ToAdd = ['BGOInterceptY', 'BGOInterceptX','BGOSlopeX', 'BGOSlopeY']
             for key_ToAdd in ToAdd:
                 keys.append( key_ToAdd ) 
         elif( key=="NonZeroPSD" ):
@@ -726,14 +734,14 @@ def Combine_npy_dict(Filelist=[], keys=[], filters=['HE_trigger', 'Skimmed'],\
         if( key=="MLcontainment" ):
             BGO_TopZ, BGO_BottomZ = 46., 448.
             cut = 280
-            topX = data['STKSlopeX'] * BGO_TopZ + data['STKInterceptX']
-            topY = data['STKSlopeY'] * BGO_TopZ + data['STKInterceptY']
-            bottomX = data['STKSlopeX'] * BGO_BottomZ + data['STKInterceptX']
-            bottomY = data['STKSlopeY'] * BGO_BottomZ + data['STKInterceptY']
+            topX = data['BGOSlopeX'] * BGO_TopZ + data['BGOInterceptX']
+            topY = data['BGOSlopeY'] * BGO_TopZ + data['BGOInterceptY']
+            bottomX = data['BGOSlopeX'] * BGO_BottomZ + data['BGOInterceptX']
+            bottomY = data['BGOSlopeY'] * BGO_BottomZ + data['BGOInterceptY']
             ml_bgo_fid = (abs(topX)<cut) * (abs(topY)<cut) * (abs(bottomX)<cut) * (abs(bottomY)<cut)
             w = w * ml_bgo_fid
         elif( key=="NonZeroPSD" ):
-            w = w * np.sum(data['PSD_charge']>0.1, axis=1, dtype=np.bool)
+            w = w * np.sum(data['PSD_charge']>0.1, axis=1, dtype=bool)
         else:
             w = w * data[key]
     for key in data:
