@@ -401,6 +401,9 @@ def pol_fun(x, *c):
         res = res + c[i]*np.power(x, i)
     return res
 
+def Volume_sphere(radius):
+    return np.ceil(np.pi)/np.floor(np.pi)*np.pi*np.power(radius,np.floor(np.pi))
+
 def mjd_to_year(mjd):
     """
     Conver the mjd value to the year (rough method)
@@ -581,17 +584,17 @@ class Hist(object):
             ylabel = "CDF"
         elif( type=="inv_cdf" ):
             height = 1-self.cdf
+            ylabel = '1-CDF'
         else:
             raise Exception("Unknown histogram type specified: {}. Please selected 'hist' (default), 'normed', 'density', 'pdf', 'cdf' or 'inv_cdf'.")
         
         if( type=="cdf" ):
             y = [0] + list(self.cdf)
             plot = ax.step(self.bins, y, where='post', **kw)
-        
         elif( step ):
             y = list(height) + [height[-1]]
             plot = ax.step(self.bins, y, where='post', **kw)
-            return plot
+            #return plot
         else:
             mask = height>0
             plot = ax.bar(self.bins[:-1][mask], height[mask], self.bin_width[mask], align='edge', **kw)
@@ -619,10 +622,13 @@ class Hist(object):
 ### DAMPE stuff
 
 
-def PSD_charge_fit(x, a, b, c, d):
+def PSD_charge_fit_old(x, a, b, c, d):
     # Sum of a linear function and an exponential
     # Similar to Misha, he uses a + exp(b * x + c)
     return np.exp(a*(x-b)) + c + d*x
+
+def PSD_charge_fit(loge, *p):
+    return p[0] + p[1] * loge**p[2] + p[3]*loge**p[4]
 
 def Reweight_events(z_stop, corr, nbins=1000, z_leftmost=-380, z_rightmost=480):
     """
@@ -691,10 +697,11 @@ def Reweight_events(z_stop, corr, nbins=1000, z_leftmost=-380, z_rightmost=480):
 
 
 def Combine_npy_dict(Filelist=[], keys=[],\
-                     filters=['HE_trigger', 'Skimmed','NonZeroPSD','MLcontainmentBGO','MLcontainmentSTK'],\
-                     npy_dir="/dpnc/beegfs/users/coppinp/Simu_vary_cross_section_with_Geant4/Analysis/npy_files/"):
+                     filters=['HE_trigger','NonZeroPSD','MLcontainmentBGO','MLcontainmentSTK','skim'],\
+                     npy_dir="/dpnc/beegfs/users/coppinp/Simu_vary_cross_section_with_Geant4/Analysis/npy_files/",):
     import copy
     keys = copy.deepcopy(keys)
+
     data = {}
     for key in filters:
         if( key=="MLcontainmentBGO" ):
@@ -705,6 +712,11 @@ def Combine_npy_dict(Filelist=[], keys=[],\
             ToAdd = ['STKInterceptY', 'STKInterceptX','STKSlopeX', 'STKSlopeY']
             for key_ToAdd in ToAdd:
                 keys.append( key_ToAdd )
+        elif( key=='TrueContainment' ):
+            keys.append( 'TrueContainment' )
+            # ToAdd = ['start_x','start_y','start_z','stop_x','stop_y','stop_z']
+            # for key_ToAdd in ToAdd:
+            #     keys.append( key_ToAdd )
         elif( key=="NonZeroPSD" ):
             keys.append( "PSD_charge" )
         elif( key not in keys ):
@@ -714,8 +726,8 @@ def Combine_npy_dict(Filelist=[], keys=[],\
     for f in Filelist:
         #print(f)
         data_i = np.load(npy_dir+f, allow_pickle=True, encoding="latin1").item()
-        N_i = len(data_i['E_p'])
-        weight = (1.0/N_i) * np.ones(N_i)
+        N_i = len(data_i['E_p']) + int( 10 * len(data_i['E_primary_non_trig']) )
+        weight = (1.0/N_i) * np.ones( len(data_i['E_p'])  )
         if( "10GeV_to_10TeV" in f ):
             # Weight normally 1 per decade, so total weight is 3 if adding file that spans 3 decades
             weight *= 3
@@ -731,14 +743,14 @@ def Combine_npy_dict(Filelist=[], keys=[],\
                 data[key] = data_i[key]
             else:
                 data[key] = np.concatenate([data[key],data_i[key]])
-    for key in ["E_p","E_total_BGO", "E_total_PSD"]:
+    for key in ["E_p","E_total_BGO", "E_total_PSD", "E_primary_non_trig"]:
         if( key in data ):
             data[key] = 1e-3 * data[key]
     
     # w = data['HE_trigger'] * data["Skimmed"]
     w = np.ones_like(data["E_total_BGO"], dtype=bool)
     for key in filters:
-        if( key=="MLcontainmentBGO" ):
+        if( key=='MLcontainmentBGO' ):
             # BGO prediction fiducially contained in BGO
             BGO_TopZ, BGO_BottomZ = 46., 448.
             cut = 280
@@ -748,7 +760,15 @@ def Combine_npy_dict(Filelist=[], keys=[],\
             bottomY = data['BGOSlopeY'] * BGO_BottomZ + data['BGOInterceptY']
             ml_bgo_fid = (abs(topX)<cut) * (abs(topY)<cut) * (abs(bottomX)<cut) * (abs(bottomY)<cut)
             w = w * ml_bgo_fid
-        elif( key=="MLcontainmentSTK" ):
+            # Additional requirement: Make sure STK track is trustworthy
+            TopZ = -210.
+            cutTop = 500.
+            topX = data['BGOSlopeX'] * TopZ + data['BGOInterceptX']
+            topY = data['BGOSlopeY'] * TopZ + data['BGOInterceptY']
+            w = w * (abs(topX)<cutTop) * (abs(topY)<cutTop)
+
+
+        elif( key=='MLcontainmentSTK' ):
             # STK prediction fiducially contained within PSD to BGO
             TopZ, BottomZ = -325, 448.
             cutTop, cutBottom = 440, 280
@@ -761,9 +781,23 @@ def Combine_npy_dict(Filelist=[], keys=[],\
             cutTop = 280.
             topX = data['STKSlopeX'] * TopZ + data['STKInterceptX']
             topY = data['STKSlopeY'] * TopZ + data['STKInterceptY']
-            ml_stk_fid = ml_stk_fid* (abs(topX)<cutTop) * (abs(topY)<cutTop)
-
+            ml_stk_fid = ml_stk_fid * (abs(topX)<cutTop) * (abs(topY)<cutTop)
             w = w * ml_stk_fid
+        # elif( key=='TrueContainment' ):
+        #     TopZ, BottomZ = -325, 448.
+        #     cutTop, cutBottom = 440, 280
+        #     topX = (data['stop_x']-data['start_x'])/(data['stop_z']-data['start_z'])*(TopZ-data['start_z']) + data['start_x']
+        #     topY = (data['stop_y']-data['start_y'])/(data['stop_z']-data['start_z'])*(TopZ-data['start_z']) + data['start_y']
+        #     bottomX = (data['stop_x']-data['start_x'])/(data['stop_z']-data['start_z'])*(BottomZ-data['start_z']) + data['start_x']
+        #     bottomY = (data['stop_y']-data['start_y'])/(data['stop_z']-data['start_z'])*(BottomZ-data['start_z']) + data['start_y']
+        #     w_fid = (abs(topX)<cutTop) * (abs(topY)<cutTop) * (abs(bottomX)<cutBottom) * (abs(bottomY)<cutBottom)
+        #     ### REQUIRE THEM ALSO TO GO THROUGH THE TOP LAYER OF BGO!!!
+        #     BottomZ = 44.
+        #     cutBottom = 280
+        #     bottomX = (data['stop_x']-data['start_x'])/(data['stop_z']-data['start_z'])*(BottomZ-data['start_z']) + data['start_x']
+        #     bottomY = (data['stop_y']-data['start_y'])/(data['stop_z']-data['start_z'])*(BottomZ-data['start_z']) + data['start_y']
+        #     w_fid = w_fid * (abs(bottomX)<cutBottom) * (abs(bottomY)<cutBottom)
+        #     w = w * w_fid
         elif( key=="NonZeroPSD" ):
             w = w * np.sum(data['PSD_charge']>0.1, axis=1, dtype=bool)
         else:
@@ -772,9 +806,9 @@ def Combine_npy_dict(Filelist=[], keys=[],\
         if( key=="E_primary_non_trig" ):
             continue
         elif( key=="E_p"):
-            data['E_primary_non_trig'] = np.concatenate( [data['E_primary_non_trig'],data['E_p'][~w]] )
+            if( "E_primary_non_trig" in data ):
+                data['E_primary_non_trig'] = np.concatenate( [data['E_primary_non_trig'],data['E_p'][~w][::10]] )
         data[key] = data[key][w]
-    
 
     if( "PSD_charge" in data ):
         data["PSD_charge"] = np.maximum( data['PSD_charge'], 0.0 )
@@ -784,7 +818,13 @@ def Combine_npy_dict(Filelist=[], keys=[],\
 Proton_filelist = ["allProton-v6r0p10_10GeV_100GeV_FTFP-p2.npy",\
                    "allProton-v6r0p10_100GeV_1TeV_FTFP-p1.npy",\
                    "allProton-v6r0p10_1TeV_10TeV_FTFP.npy",\
-                   "allProton-v6r0p10_10TeV_100TeV_FTFP.npy"]
+                   "allProton-v6r0p10_10TeV_100TeV_FTFP.npy",\
+                   "allProton-v6r0p12_100TeV_1PeV_EPOSLHC_FTFP_BERT.npy"]
+ProtonFluka_filelist =["allProton-v6r0p15_10GeV_100GeV-FLUKA.npy",\
+                       "allProton-v6r0p15_100GeV_1TeV-FLUKA.npy",\
+                       "allProton-v6r0p15_1TeV_10TeV-FLUKA.npy",\
+                       "allProton-v6r0p15_10TeV_100TeV-FLUKA.npy",\
+                       "allProton-v6r0p15_100TeV_1PeV-FLUKA.npy"]
 Helium_filelist = ["allHe4-v6r0p10_10GeV_100GeV_FTFP.npy",\
                    "allHe4-v6r0p10_100GeV_1TeV_FTFP.npy",\
                    "allHe4-v6r0p10_1TeV_10TeV-FTFP.npy",\
@@ -795,12 +835,18 @@ HeliumFluka_filelist = ["allHe4-v6r0p10_10GeV_100GeV-FLUKA.npy",\
                         "allHe4-v6r0p10_1TeV_10TeV-FLUKA.npy",\
                         "allHe4-v6r0p10_10TeV_100TeV-FLUKA-p1.npy",\
                         "allHe4-v6r0p10_100TeV_500TeV-FLUKA.npy"]
+Lithium7_filelist = ["allLi7-v6r0p10_10GeV_100GeV_QGSP.npy",\
+                     "allLi7-v6r0p10_100GeV_1TeV_QGSP.npy",\
+                     "allLi7-v6r0p10_1TeV_10TeV-FTFP.npy"]
+Beryllium9_filelist = ["allBe9-v6r0p10_10GeV_100GeV_QGSP.npy",\
+                       "allBe9-v6r0p10_100GeV_1TeV_FTFP-p1.npy",\
+                       "allBe9-v6r0p10_1TeV_10TeV-FTFP.npy"]
+
 HeliumFullSky_filelist = ["Helium_10GeV_to_10TeV_FullSky.npy"]
 Proton80_filelist = ["Proton_10GeV_to_10TeV_80perc.npy",\
                      "Proton_10TeV_to_100TeV_80perc.npy"]
 Proton120_filelist = ["Proton_10GeV_to_10TeV_120perc.npy",\
                       "Proton_10TeV_to_100TeV_120perc.npy"]
-
 Helium80_filelist = ["Helium_10GeV_to_10TeV_80perc.npy",\
                      "Helium_10TeV_to_100TeV_80perc.npy"]
 Helium120_filelist = ["Helium_10GeV_to_10TeV_120perc.npy",\
@@ -808,7 +854,9 @@ Helium120_filelist = ["Helium_10GeV_to_10TeV_120perc.npy",\
 Helium200_filelist = ["Helium_10GeV_to_10TeV_200perc.npy",\
                       "Helium_10TeV_to_100TeV_200perc.npy"]
 
-sample_sets = {"Proton": Proton_filelist, "Helium": Helium_filelist, "HeliumFluka": HeliumFluka_filelist,\
+sample_sets = {"Proton": Proton_filelist, "Helium": Helium_filelist,\
+               "ProtonFluka": ProtonFluka_filelist, "HeliumFluka": HeliumFluka_filelist,\
+               "Lithium7": Lithium7_filelist, "Beryllium9": Beryllium9_filelist,\
                "Proton120": Proton120_filelist, "Proton80": Proton80_filelist,\
                "Helium120": Helium120_filelist, "Helium80": Helium80_filelist,\
                "Helium200": Helium200_filelist, "HeliumFullSky": HeliumFullSky_filelist}
