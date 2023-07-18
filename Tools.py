@@ -517,6 +517,31 @@ def Plot_skymap(prior):
     plt.close()
     return fig
 
+def AMS_He_3_4_ratio_rigidity(R):
+    # This function is based on the parametrisation from:
+    # https://journals.aps.org/prl/pdf/10.1103/PhysRevLett.123.181102
+    return 0.1476 * np.power(0.25*R, -0.294)
+
+def AMS_He_3_4_ratio_Ekin(E_kin,spectral_index=-2.65):
+    Rigidity = lambda E, mass: np.sqrt(np.power(mass+E,2)-mass**2) / 2
+    R_3 = Rigidity(E_kin,0.931*3.016029)
+    R_4 = Rigidity(E_kin,0.931*4.002603)
+    ratio_R3 = AMS_He_3_4_ratio_rigidity(R_3)
+    return ratio_R3 * np.power(R_3/R_4,spectral_index)
+
+def Helium_mass(E_kin):
+    he3_to_he4 = AMS_He_3_4_ratio_Ekin(E_kin)
+    return he3_to_he4 * 3 + (1 - he3_to_he4) * 4
+
+def Helium_mass_rigidity(E_kin):
+    he3_to_he4 = AMS_He_3_4_ratio_rigidity(E_kin)
+    return he3_to_he4 * 3 + (1 - he3_to_he4) * 4
+
+def Central_energy(E1, E2, g=-2.65):
+    num = np.power(E2,g+1) - np.power(E1,g+1)
+    den = (g+1) * (E2-E1)
+    return np.power(num/den, 1./g)
+
 class Hist(object):
     def __init__(self, data, log=False, height=False, **kw):
         if( log ):
@@ -557,6 +582,11 @@ class Hist(object):
 
     def Add_counts(self, idx, counts):
         self.hist[idx] = self.hist[idx] + counts
+        self.set_vars()
+
+    def Add_values(self, values):
+        new_hist, new_bin_edges = np.histogram(values, bins=self.bins)
+        self.hist += new_hist
         self.set_vars()
     
     def set_errors(self, probability_content = 0.683):
