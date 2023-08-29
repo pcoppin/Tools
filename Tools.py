@@ -725,6 +725,51 @@ def Reweight_events(z_stop, corr, nbins=1000, z_leftmost=-380, z_rightmost=480):
 
     return [h, pdf_normal, pdf_rescaled, cdf_normal, cdf_rescaled, weights, bins, bin_center]
 
+def Reweight(MCs, rescaling_factor=1., samples=None):
+    import pickle
+    from copy import deepcopy
+    if samples is None:
+        samples = MCs.keys()
+    for sample in samples:
+        Pickle_dir = '/Users/pcoppin/Documents/Postdoc/z_classifier/Reweighting/WeightingPickles/'
+        Pickle_file = '{}_PSD{:04d}_STK{:04d}_BGO{:04d}.pickle'.format(sample,
+                                                                       int(1e3*rescaling_factor[0]),
+                                                                       int(1e3*rescaling_factor[1]),
+                                                                       int(1e3*rescaling_factor[2]))
+        Pickle_file = Pickle_dir + Pickle_file
+        with open(Pickle_file, 'rb') as f:
+            interpolator = pickle.load(f)
+        d = MCs[sample]
+        x = np.log10( d['E_p'] )
+        y = d['pv_cos_theta']
+        z = d['stop_z']
+        scaling_factor = interpolator(np.dstack((x,y,z)))[0]
+        d['scaling_factor'] = scaling_factor
+        if 'Original_MC_weights' not in d:
+            d['Original_MC_weights'] = deepcopy(d['MC_weights'])
+        d['MC_weights'] = d['Original_MC_weights'] * scaling_factor
+
+def STK_selection(dd, primary='Proton', variance_mean=0.3, tight_cuts=False, low_high=None):
+    cut_range = {(False,'Proton'):  [0.8, 1.3],
+                 (True, 'Proton'):  [0.9, 1.15],
+                 (False, 'Helium'): [1.8, 2.6],
+                 (True,  'Helium'): [1.9, 2.3],
+                 (False, 'None'): [-999, 1e9]}
+    Req_n_close_to_median = 7 if tight_cuts else 6
+    if low_high is not None:
+        low, high = low_high
+    else:
+        low, high = cut_range[(tight_cuts,primary)]
+    
+    STK_charge = dd['Median_STK_charge_EtaThetaCorr']
+    w_close_to_median = np.abs( np.sqrt(dd['HitSignalEtaThetaCorr'])-STK_charge[:,np.newaxis] ) < variance_mean
+    N_close_to_median = np.sum(w_close_to_median, axis=1)
+
+    res = (STK_charge>low) * (STK_charge<high) * (N_close_to_median>=Req_n_close_to_median)
+    # N_HitSignal = np.sum(dd['HitSignalEtaThetaCorr']>=0.1, axis=1)
+    # res *= (N_HitSignal>6)
+    return res
+
 
 def Combine_npy_dict(Filelist=[], keys=[],\
                      filters=['HE_trigger','NonZeroPSD','MLcontainmentBGO','MLcontainmentSTK','skim'],\
