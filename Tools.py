@@ -23,7 +23,9 @@ Sky_in_square_deg = 4*np.pi * sr_to_deg2
 Code_folder       = "/mnt/2690D37B90D35043/PhD/Code"
 mpl_style_file    = pwd + "matplotlib_style"
 
-colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:pink', 'tab:grey']
+
+colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:pink', 'tab:grey', 'tab:red']
+markers = ['o', 'v', '^', 's', 'd', '*']
 
 def logspace(min_range, max_range, counts):
     return np.logspace(np.log10(min_range), np.log10(max_range), counts)
@@ -73,21 +75,6 @@ def distance_point_to_line(point,line):
     t_min     = sum((y-x)*direction)
     d_min_vec = x+t_min*direction-y
     return np.sqrt(sum(d_min_vec*d_min_vec))
-
-def DmpTrigger(TriggerStat, idx, MC=None):
-    # TriggerStat: dc.GetDmpEvent(i).pEvtHeader().GetTriggerStatus()
-    # Alternatively: Header.GeneratedTrigger(idx) ;  Header.EnabledTrigger(idx)
-    # idx: 0 (unbiased), 1 & 2 (MIP), 3 (high energy), 4 (low energy)
-    TriggerStatBin = format(TriggerStat,"b")[::-1]
-    if( MC is None ):
-        raise Exception("Specify MC as 'True' or 'False'")
-    elif( MC ):
-        # Generated is always True for MC, except for MIP, for which it's always False
-        enabled   = 1
-    else:
-        enabled   = int(TriggerStatBin[idx])
-    triggered = int(TriggerStatBin[8+idx])
-    return enabled * triggered
 
 def Efficiency_for_binomial_process(N,k,probability_content=0.683):
     """
@@ -264,40 +251,43 @@ def Moyal(x, *p):
     f = np.exp(-(xt + np.exp(-xt)) / 2)
     return p[0] * f / f.max()
 
-def Landau(x, *p):
-    '''
-    Exact landau distribution (numerically integrated)
-    I find that dt=0.1 and infinity=100 gives good enough approximation
-    '''
-    xt = (x - p[0]) / p[1]
-    tt = np.linspace(0.0001, 100, 2000) # Avoid zero
-    dt = tt[1]-tt[0]
-    t = np.meshgrid(np.ones(len(x)), tt)[1]
-    A = (1/np.pi*np.exp(-t * np.log(t) - xt * t) * np.sin(np.pi * t)).sum(axis=0)
-    A[x < p[0] - 3 * p[1]] = 0.
-    #A[A<0] = 0.0
-    #A[np.isnan(A)] = 0.0
-    return A * dt / p[1]#/ (A * dt).max()
+def Landau(x, mu, sigma):
+    dt = 0.01
+    t_max = 25
+    t = np.arange(1e-6, t_max, dt)
+    res = 1/(np.pi*sigma)*np.sum(np.exp(-t)*np.cos(t*(x-mu)/sigma+2*t/np.pi*np.log(t/sigma)))*dt
+    res *= int((x<(mu+20*sigma)) * (x>(mu-12*sigma)))
+    return res
+Landau = np.vectorize(Landau)
 
 def Gauss(x, *p):
     xt = (x - p[0]) / p[1]
     norm = 1/np.sqrt(2*np.pi*p[1]**2)
     return norm*np.exp(-0.5 * xt**2)
 
-def Langau(x, *p):
-    '''
-    Landau distribution convolved with gaussian noise
-    '''
-    tau_arr = np.linspace(x.min() - x.mean(), 
-                          x.max() - x.mean(), len(x))
-    c = np.convolve(Landau(x, p[0], p[1]),
-                    Gauss(tau_arr, 0, p[2]))
-    xnew = np.linspace(x.min() + tau_arr.min(),
-                       x.max() + tau_arr.max(),
-                       len(x) + len(tau_arr) - 1)
-    f = np.interp(x, xnew, c)
-    f = f * (x[1] - x[0])
-    return f
+def Langau(x, mu, sigma_landau, sigma_gauss):
+    ratio = sigma_landau/sigma_gauss
+    if( ratio>=20 ):
+        return Landau(x, mu, sigma_landau)
+    elif( ratio<=0.05 ):
+        return Gauss(x, mu, sigma_gauss)
+    sigma = np.sqrt(sigma_gauss**2+sigma_landau**2)
+    t_min = -10*sigma
+    t_max = 18*sigma
+    dt = min(sigma_gauss,sigma_landau)/20
+    t = np.arange(t_min, t_max, dt)
+    
+    y_landau = Landau(t, mu, sigma_landau)
+    xx, tt = np.meshgrid(x,t)
+    diff = xx-tt
+    y_gauss = Gauss(diff, 0, sigma_gauss)
+    
+    res = dt*np.sum(y_landau[:,np.newaxis]*y_gauss, axis=0)
+    
+    if( hasattr(x, '__len__') ):
+        return res
+    else:
+        return res[0]
 
 def kent(s, dpsi):
     """
@@ -651,6 +641,20 @@ class Hist(object):
     
 ### DAMPE stuff
 
+def DmpTrigger(TriggerStat, idx, MC=None):
+    # TriggerStat: dc.GetDmpEvent(i).pEvtHeader().GetTriggerStatus()
+    # Alternatively: Header.GeneratedTrigger(idx) ;  Header.EnabledTrigger(idx)
+    # idx: 0 (unbiased), 1 & 2 (MIP), 3 (high energy), 4 (low energy)
+    TriggerStatBin = format(TriggerStat,"b")[::-1]
+    if( MC is None ):
+        raise Exception("Specify MC as 'True' or 'False'")
+    elif( MC ):
+        # Generated is always True for MC, except for MIP, for which it's always False
+        enabled   = 1
+    else:
+        enabled   = int(TriggerStatBin[idx])
+    triggered = int(TriggerStatBin[8+idx])
+    return enabled * triggered
 
 def PSD_charge_fit_old(x, a, b, c, d):
     # Sum of a linear function and an exponential
@@ -749,13 +753,16 @@ def Reweight(MCs, rescaling_factor=1., samples=None):
             d['Original_MC_weights'] = deepcopy(d['MC_weights'])
         d['MC_weights'] = d['Original_MC_weights'] * scaling_factor
 
-def STK_selection(dd, primary='Proton', variance_mean=0.3, tight_cuts=False, low_high=None):
+def STK_selection(dd, primary='Proton', variance_mean=0.3, tight_cuts=False, low_high=None, n_med=None):
     cut_range = {(False,'Proton'):  [0.8, 1.3],
                  (True, 'Proton'):  [0.9, 1.15],
                  (False, 'Helium'): [1.8, 2.6],
                  (True,  'Helium'): [1.9, 2.3],
                  (False, 'None'): [-999, 1e9]}
-    Req_n_close_to_median = 7 if tight_cuts else 6
+    if( n_med is not None):
+        Req_n_close_to_median = n_med
+    else:
+        Req_n_close_to_median = 7 if tight_cuts else 6
     if low_high is not None:
         low, high = low_high
     else:
@@ -770,6 +777,85 @@ def STK_selection(dd, primary='Proton', variance_mean=0.3, tight_cuts=False, low
     # res *= (N_HitSignal>6)
     return res
 
+def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, Only_regular=False):
+    import pickle
+    splines_dir = '/Users/pcoppin/Documents/Postdoc/Code/PSD_smearing/Smearing_parameterisations/'
+    with open(splines_dir+f"MC_{trigger}_fit.pickle", "rb") as f:
+        splines_MC = pickle.load(f)
+    with open(splines_dir+f"Skim_{trigger}_fit.pickle", "rb") as f:
+        splines_SK = pickle.load(f)
+
+    for sample in MC_samples:
+        dd[sample]["PSD_charge_corr"] = np.zeros( (len(dd[sample]["PSD_charge"]),5), dtype=float)
+        E = dd[sample]["E_total_BGO"]
+
+        for i in range(5):
+            if( Only_regular and i==4 ):
+                continue
+            MC_center = PSD_charge_fit(np.log10(E),*splines_MC[(sample,i)][0][0])
+            MC_width = PSD_charge_fit(np.log10(E),*splines_MC[(sample,i)][1][0])
+            Skim_center = PSD_charge_fit(np.log10(E),*splines_SK[(sample.replace('Fluka',''),i)][0][0])
+            Skim_width = PSD_charge_fit(np.log10(E),*splines_SK[(sample.replace('Fluka',''),i)][1][0])
+            q = dd[sample]["PSD_charge"][:,i] if i<4 else dd[sample]["PSD_charge_Xin_pro"]
+            w = q>0.1
+            dd[sample]["PSD_charge_corr"][w,i] = (q[w]-MC_center[w]) * Skim_width[w]/MC_width[w] + Skim_center[w]
+
+    return None
+
+def PSD_selection(dd, trigger, sample, sigma_left=-5, sigma_right=3):
+    idx = 4 # Using Xin's charge for now
+
+    import pickle
+    splines_dir = '/Users/pcoppin/Documents/Postdoc/Code/PSD_smearing/Smearing_parameterisations/'
+    splines_file = f"MC_{trigger}_fit.pickle" if 'E_p' in dd else f"Skim_{trigger}_fit.pickle"
+    with open(splines_dir+splines_file, "rb") as f:
+        splines = pickle.load(f)
+
+    if( 'E_p' not in dd ):
+        sample = sample.replace('Fluka','')
+    E = dd["E_total_BGO"]
+    Q_center = PSD_charge_fit(np.log10(E),*splines[(sample,idx)][0][0])
+    Q_width = PSD_charge_fit(np.log10(E),*splines[(sample,idx)][1][0])
+    q = dd["PSD_charge_Xin_pro"]
+    diff = (q-Q_center)/Q_width
+    w = (diff>sigma_left) * (diff<sigma_right)
+    return w
+
+def PSD_selection_proton_paper(dd, PSD_charge='Xin'):
+    E = dd['E_total_BGO']
+    left = 0.6 + 0.05 * np.log10(E/10)
+    right = 1.8 + 0.002 * np.power(np.log10(E/10),4)
+    if( PSD_charge=='Xin' ):
+        q = dd['PSD_charge_corr'][:,4] if 'E_p' in dd else dd['PSD_charge_Xin_pro_STKtrack']
+        return (left<q) * (q<right)
+    elif( PSD_charge=='Mine_x' ):
+        return (left<dd['charge_x']) * (dd['charge_x']<right)
+    elif( PSD_charge=='Mine_xy' ):
+        # w_x = (left<dd['charge_x']) * (dd['charge_x']<right)
+        # w_y = (left<dd['charge_y']) * (dd['charge_y']<right)
+        # return w_x * w_y
+        return (left<dd['charge_xy']) * (dd['charge_xy']<right)
+    else:
+        raise Exception(f'Type of charge: {PSD_charge} unknown')
+        return 0
+
+def PSD_selection_helium_paper(dd, PSD_charge='Xin'):
+    E = dd['E_total_BGO']
+    left = 1.85 + 0.02 * np.log10(E/10)
+    right = 2.8 + 0.007 * np.power(np.log10(E/10),4)
+    if( PSD_charge=='Xin' ):
+        q = dd['PSD_charge_corr'][:,4] if 'E_p' in dd else dd['PSD_charge_Xin_pro']
+        return (left<q) * (q<right)
+    elif( PSD_charge=='Mine_x' ):
+        return (left<dd['charge_x']) * (dd['charge_x']<right)
+    elif( PSD_charge=='Mine_xy' ):
+        w_x = (left<dd['charge_x']) * (dd['charge_x']<right)
+        w_y = (left<dd['charge_y']) * (dd['charge_y']<right)
+        ratio = dd['charge_x']/dd['charge_y']
+        return w_x * w_y * (ratio>0.5) * (ratio<2)
+    else:
+        raise Exception(f'Type of charge: {PSD_charge} unknown')
+        return 0
 
 def Combine_npy_dict(Filelist=[], keys=[],\
                      filters=['HE_trigger','NonZeroPSD','MLcontainmentBGO','MLcontainmentSTK','skim'],\
@@ -793,7 +879,7 @@ def Combine_npy_dict(Filelist=[], keys=[],\
             # for key_ToAdd in ToAdd:
             #     keys.append( key_ToAdd )
         elif( key=="NonZeroPSD" ):
-            keys.append( "PSD_charge" )
+            keys.append( "PSD_charge_STKtrack" )
         elif( key not in keys ):
             keys.append( key )
     keys = np.unique(keys)
@@ -801,6 +887,23 @@ def Combine_npy_dict(Filelist=[], keys=[],\
     for f in Filelist:
         #print(f)
         data_i = np.load(npy_dir+f, allow_pickle=True, encoding="latin1").item()
+
+
+
+
+
+
+        # Compatibility for old skim files (To be removed once all ntuples are updated)
+        if( 'PSD_charge' in data_i ):
+            data_i['PSD_charge_STKtrack'] = data_i['PSD_charge']
+            data_i['PSD_length_STKtrack'] = data_i['PSD_length']
+            data_i['PSD_charge_Xin_pro_STKtrack'] = data_i['PSD_charge_Xin_pro']
+
+
+
+
+
+
         N_i = len(data_i['E_p']) + int( 10 * len(data_i['E_primary_non_trig']) )
         weight = (1.0/N_i) * np.ones( len(data_i['E_p'])  )
         if( "10GeV_to_10TeV" in f ):
@@ -874,7 +977,7 @@ def Combine_npy_dict(Filelist=[], keys=[],\
         #     w_fid = w_fid * (abs(bottomX)<cutBottom) * (abs(bottomY)<cutBottom)
         #     w = w * w_fid
         elif( key=="NonZeroPSD" ):
-            w = w * np.sum(data['PSD_charge']>0.1, axis=1, dtype=bool)
+            w = w * np.sum(data['PSD_charge_STKtrack']>0.1, axis=1, dtype=bool)
         else:
             w = w * data[key]
     for key in data:
@@ -885,8 +988,8 @@ def Combine_npy_dict(Filelist=[], keys=[],\
                 data['E_primary_non_trig'] = np.concatenate( [data['E_primary_non_trig'],data['E_p'][~w][::10]] )
         data[key] = data[key][w]
 
-    if( "PSD_charge" in data ):
-        data["PSD_charge"] = np.maximum( data['PSD_charge'], 0.0 )
+    if( "PSD_charge_STKtrack" in data ):
+        data["PSD_charge_STKtrack"] = np.maximum( data['PSD_charge_STKtrack'], 0.0 )
 
     return data
 
@@ -917,6 +1020,11 @@ Beryllium9_filelist = ["allBe9-v6r0p10_10GeV_100GeV_QGSP.npy",\
                        "allBe9-v6r0p10_100GeV_1TeV_FTFP-p1.npy",\
                        "allBe9-v6r0p10_1TeV_10TeV-FTFP.npy"]
 
+Carbon_filelist = ["allC12-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0.npy",\
+                   "allC12-v6r0p13-reco-v6r0p15_1TeV_10TeV-FTFP.npy",\
+                   "allC12-v6r0p15_10TeV_100TeV_FTFP-BGO-Quenching-p0.npy",\
+                   "allC12-v6r0p15_100TeV_500TeV_EPOSLHC_FTFP.npy"]
+
 HeliumFullSky_filelist = ["Helium_10GeV_to_10TeV_FullSky.npy"]
 Proton80_filelist = ["Proton_10GeV_to_10TeV_80perc.npy",\
                      "Proton_10TeV_to_100TeV_80perc.npy"]
@@ -934,7 +1042,8 @@ sample_sets = {"Proton": Proton_filelist, "Helium": Helium_filelist,\
                "Lithium7": Lithium7_filelist, "Beryllium9": Beryllium9_filelist,\
                "Proton120": Proton120_filelist, "Proton80": Proton80_filelist,\
                "Helium120": Helium120_filelist, "Helium80": Helium80_filelist,\
-               "Helium200": Helium200_filelist, "HeliumFullSky": HeliumFullSky_filelist}
+               "Helium200": Helium200_filelist, "HeliumFullSky": HeliumFullSky_filelist,\
+               "Carbon": Carbon_filelist}
     
 
 
