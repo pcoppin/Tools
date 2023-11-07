@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import pickle
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -277,7 +278,8 @@ def Langau(x, mu, sigma_landau, sigma_gauss):
     dt = min(sigma_gauss,sigma_landau)/20
     t = np.arange(t_min, t_max, dt)
     
-    y_landau = Landau(t, mu, sigma_landau)
+    from landaupy import landau
+    y_landau = landau.pdf(t, mu, sigma_landau)
     xx, tt = np.meshgrid(x,t)
     diff = xx-tt
     y_gauss = Gauss(diff, 0, sigma_gauss)
@@ -288,6 +290,9 @@ def Langau(x, mu, sigma_landau, sigma_gauss):
         return res
     else:
         return res[0]
+
+def RMS(x):
+    return np.sqrt(np.mean(np.power(x-np.mean(x),2)))
 
 def kent(s, dpsi):
     """
@@ -532,6 +537,9 @@ def Central_energy(E1, E2, g=-2.65):
     den = (g+1) * (E2-E1)
     return np.power(num/den, 1./g)
 
+def Rigidity_to_kinetic_energy(rigidity, charge=1, mass=0.931):
+    return np.sqrt(np.power(charge,2)*np.power(rigidity,2)+mass**2) - mass
+
 class Hist(object):
     def __init__(self, data, log=False, height=False, **kw):
         if( log ):
@@ -664,6 +672,67 @@ def PSD_charge_fit_old(x, a, b, c, d):
 def PSD_charge_fit(loge, *p):
     return p[0] + p[1] * loge**p[2] + p[3]*loge**p[4]
 
+def PSD_weight_fit(loge, *p):
+    return p[0] + p[1]*loge + p[2]*np.power(loge,2) + p[3]*np.power(loge,p[4])
+
+
+
+
+
+
+
+
+
+
+# Function below is to be deleted after a commit
+def Proton_to_ProtonPlusHelium(E_BGO):
+    le = np.log10(E_BGO)
+    if( E_BGO<3e2 ):
+        return (0.63-0.54)/(1.3-2.4771)*(le-2.4771) + 0.54
+    elif( E_BGO<3e3 ):
+        return (0.54-0.51)/(2.4771-3.4771)*(le-3.4771) + 0.51
+    elif( le<4 ):
+        return (0.51-0.42)/(3.4771-4)*(le-4) + 0.42
+    else:
+        return 0.42
+Proton_to_ProtonPlusHelium = np.vectorize(Proton_to_ProtonPlusHelium)
+
+
+
+
+
+
+
+
+
+
+# Let's do it properly based on the fits now
+def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0):
+    # Smearing splines for MIP are for x and y
+    if( trigger in ['MIP1','MIP2'] ):
+        trigger = 'MIP'
+    s_dir = '/Users/pcoppin/Documents/Postdoc/Code/PSD_smearing/Smearing_parameterisations'
+    with open(f"{s_dir}/Skim_{trigger}_fit.pickle", "rb") as f:
+        splines_SK = pickle.load(f)
+    data_popt, data_E, data_y, data_yerr = splines_SK[(sample,PSD_sublayer)][2]
+    data_func = lambda E_i: PSD_weight_fit(np.log10(E_i), *data_popt)
+    res = data_func(E_BGO)
+    w = E_BGO>data_E[-1]
+    res[w] = data_func(data_E[-1])
+    return res
+
+
+
+
+
+
+
+
+
+
+def Helium_to_ProtonPlusHelium(E_BGO):
+    return 1 - Proton_to_ProtonPlusHelium(E_BGO)
+
 def Reweight_events(z_stop, corr, nbins=1000, z_leftmost=-380, z_rightmost=480):
     """
     Generate weights for MC events to make it such that the amount of events that interact
@@ -778,6 +847,9 @@ def STK_selection(dd, primary='Proton', variance_mean=0.3, tight_cuts=False, low
     return res
 
 def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, Only_regular=False):
+    # Smearing splines for MIP are for x and y
+    if( trigger in ['MIP1','MIP2'] ):
+        trigger = 'MIP'
     import pickle
     splines_dir = '/Users/pcoppin/Documents/Postdoc/Code/PSD_smearing/Smearing_parameterisations/'
     with open(splines_dir+f"MC_{trigger}_fit.pickle", "rb") as f:
@@ -826,7 +898,7 @@ def PSD_selection_proton_paper(dd, PSD_charge='Xin'):
     left = 0.6 + 0.05 * np.log10(E/10)
     right = 1.8 + 0.002 * np.power(np.log10(E/10),4)
     if( PSD_charge=='Xin' ):
-        q = dd['PSD_charge_corr'][:,4] if 'E_p' in dd else dd['PSD_charge_Xin_pro_STKtrack']
+        q = dd['PSD_charge_corr'][:,4] if 'E_p' in dd else dd['PSD_charge_Xin_pro']
         return (left<q) * (q<right)
     elif( PSD_charge=='Mine_x' ):
         return (left<dd['charge_x']) * (dd['charge_x']<right)
@@ -834,6 +906,7 @@ def PSD_selection_proton_paper(dd, PSD_charge='Xin'):
         # w_x = (left<dd['charge_x']) * (dd['charge_x']<right)
         # w_y = (left<dd['charge_y']) * (dd['charge_y']<right)
         # return w_x * w_y
+        # Actually in the paper they just require the average of x & y to be in the range
         return (left<dd['charge_xy']) * (dd['charge_xy']<right)
     else:
         raise Exception(f'Type of charge: {PSD_charge} unknown')
@@ -862,7 +935,6 @@ def Combine_npy_dict(Filelist=[], keys=[],\
                      npy_dir="/dpnc/beegfs/users/coppinp/Simu_vary_cross_section_with_Geant4/Analysis/npy_files/",):
     import copy
     keys = copy.deepcopy(keys)
-
     data = {}
     for key in filters:
         if( key=="MLcontainmentBGO" ):
@@ -875,9 +947,9 @@ def Combine_npy_dict(Filelist=[], keys=[],\
                 keys.append( key_ToAdd )
         elif( key=='TrueContainment' ):
             keys.append( 'TrueContainment' )
-            # ToAdd = ['start_x','start_y','start_z','stop_x','stop_y','stop_z']
-            # for key_ToAdd in ToAdd:
-            #     keys.append( key_ToAdd )
+        elif( key=='MIP_trigger' ):
+            keys.append('MIP1_trigger')
+            keys.append('MIP2_trigger')
         elif( key=="NonZeroPSD" ):
             keys.append( "PSD_charge_STKtrack" )
         elif( key not in keys ):
@@ -887,22 +959,6 @@ def Combine_npy_dict(Filelist=[], keys=[],\
     for f in Filelist:
         #print(f)
         data_i = np.load(npy_dir+f, allow_pickle=True, encoding="latin1").item()
-
-
-
-
-
-
-        # Compatibility for old skim files (To be removed once all ntuples are updated)
-        if( 'PSD_charge' in data_i ):
-            data_i['PSD_charge_STKtrack'] = data_i['PSD_charge']
-            data_i['PSD_length_STKtrack'] = data_i['PSD_length']
-            data_i['PSD_charge_Xin_pro_STKtrack'] = data_i['PSD_charge_Xin_pro']
-
-
-
-
-
 
         N_i = len(data_i['E_p']) + int( 10 * len(data_i['E_primary_non_trig']) )
         weight = (1.0/N_i) * np.ones( len(data_i['E_p'])  )
@@ -961,23 +1017,10 @@ def Combine_npy_dict(Filelist=[], keys=[],\
             topY = data['STKSlopeY'] * TopZ + data['STKInterceptY']
             ml_stk_fid = ml_stk_fid * (abs(topX)<cutTop) * (abs(topY)<cutTop)
             w = w * ml_stk_fid
-        # elif( key=='TrueContainment' ):
-        #     TopZ, BottomZ = -325, 448.
-        #     cutTop, cutBottom = 440, 280
-        #     topX = (data['stop_x']-data['start_x'])/(data['stop_z']-data['start_z'])*(TopZ-data['start_z']) + data['start_x']
-        #     topY = (data['stop_y']-data['start_y'])/(data['stop_z']-data['start_z'])*(TopZ-data['start_z']) + data['start_y']
-        #     bottomX = (data['stop_x']-data['start_x'])/(data['stop_z']-data['start_z'])*(BottomZ-data['start_z']) + data['start_x']
-        #     bottomY = (data['stop_y']-data['start_y'])/(data['stop_z']-data['start_z'])*(BottomZ-data['start_z']) + data['start_y']
-        #     w_fid = (abs(topX)<cutTop) * (abs(topY)<cutTop) * (abs(bottomX)<cutBottom) * (abs(bottomY)<cutBottom)
-        #     ### REQUIRE THEM ALSO TO GO THROUGH THE TOP LAYER OF BGO!!!
-        #     BottomZ = 44.
-        #     cutBottom = 280
-        #     bottomX = (data['stop_x']-data['start_x'])/(data['stop_z']-data['start_z'])*(BottomZ-data['start_z']) + data['start_x']
-        #     bottomY = (data['stop_y']-data['start_y'])/(data['stop_z']-data['start_z'])*(BottomZ-data['start_z']) + data['start_y']
-        #     w_fid = w_fid * (abs(bottomX)<cutBottom) * (abs(bottomY)<cutBottom)
-        #     w = w * w_fid
         elif( key=="NonZeroPSD" ):
             w = w * np.sum(data['PSD_charge_STKtrack']>0.1, axis=1, dtype=bool)
+        elif( key=='MIP_trigger' ):
+            w = w * (data['MIP1_trigger']+data['MIP2_trigger'])
         else:
             w = w * data[key]
     for key in data:
@@ -1025,6 +1068,11 @@ Carbon_filelist = ["allC12-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0.npy",\
                    "allC12-v6r0p15_10TeV_100TeV_FTFP-BGO-Quenching-p0.npy",\
                    "allC12-v6r0p15_100TeV_500TeV_EPOSLHC_FTFP.npy"]
 
+Oxygen_filelist = ["allO16-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0.npy",\
+                   "allO16-v6r0p15_1TeV_10TeV_FTFP-BGO-Quenching-p0.npy",\
+                   "allO16-v6r0p15_10TeV_100TeV-EPOSLHC_FTFP.npy",\
+                   "allO16-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP.npy"]
+
 HeliumFullSky_filelist = ["Helium_10GeV_to_10TeV_FullSky.npy"]
 Proton80_filelist = ["Proton_10GeV_to_10TeV_80perc.npy",\
                      "Proton_10TeV_to_100TeV_80perc.npy"]
@@ -1043,7 +1091,7 @@ sample_sets = {"Proton": Proton_filelist, "Helium": Helium_filelist,\
                "Proton120": Proton120_filelist, "Proton80": Proton80_filelist,\
                "Helium120": Helium120_filelist, "Helium80": Helium80_filelist,\
                "Helium200": Helium200_filelist, "HeliumFullSky": HeliumFullSky_filelist,\
-               "Carbon": Carbon_filelist}
+               "Carbon": Carbon_filelist, "Oxygen": Oxygen_filelist}
     
 
 
