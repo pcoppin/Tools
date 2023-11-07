@@ -675,38 +675,6 @@ def PSD_charge_fit(loge, *p):
 def PSD_weight_fit(loge, *p):
     return p[0] + p[1]*loge + p[2]*np.power(loge,2) + p[3]*np.power(loge,p[4])
 
-
-
-
-
-
-
-
-
-
-# Function below is to be deleted after a commit
-def Proton_to_ProtonPlusHelium(E_BGO):
-    le = np.log10(E_BGO)
-    if( E_BGO<3e2 ):
-        return (0.63-0.54)/(1.3-2.4771)*(le-2.4771) + 0.54
-    elif( E_BGO<3e3 ):
-        return (0.54-0.51)/(2.4771-3.4771)*(le-3.4771) + 0.51
-    elif( le<4 ):
-        return (0.51-0.42)/(3.4771-4)*(le-4) + 0.42
-    else:
-        return 0.42
-Proton_to_ProtonPlusHelium = np.vectorize(Proton_to_ProtonPlusHelium)
-
-
-
-
-
-
-
-
-
-
-# Let's do it properly based on the fits now
 def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0):
     # Smearing splines for MIP are for x and y
     if( trigger in ['MIP1','MIP2'] ):
@@ -720,15 +688,6 @@ def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0):
     w = E_BGO>data_E[-1]
     res[w] = data_func(data_E[-1])
     return res
-
-
-
-
-
-
-
-
-
 
 def Helium_to_ProtonPlusHelium(E_BGO):
     return 1 - Proton_to_ProtonPlusHelium(E_BGO)
@@ -1041,6 +1000,11 @@ Proton_filelist = ["allProton-v6r0p10_10GeV_100GeV_FTFP-p2.npy",\
                    "allProton-v6r0p10_1TeV_10TeV_FTFP.npy",\
                    "allProton-v6r0p10_10TeV_100TeV_FTFP.npy",\
                    "allProton-v6r0p12_100TeV_1PeV_EPOSLHC_FTFP_BERT.npy"]
+Proton_v15_filelist = ['allProton-v6r0p15_10GeV_100GeV_FTFP-p3',\
+                       'allProton-v6r0p15_100GeV_1TeV_FTFP-p4',\
+                       'allProton-v6r0p15_1TeV_10TeV_FTFP-p3',\
+                       'allProton-v6r0p15_10TeV_100TeV_FTFP-p2',\
+                       'allProton-v6r0p15_100TeV_1PeV-EPOSLHC_FTFP']
 ProtonFluka_filelist =["allProton-v6r0p15_10GeV_100GeV-FLUKA.npy",\
                        "allProton-v6r0p15_100GeV_1TeV-FLUKA.npy",\
                        "allProton-v6r0p15_1TeV_10TeV-FLUKA.npy",\
@@ -1086,6 +1050,7 @@ Helium200_filelist = ["Helium_10GeV_to_10TeV_200perc.npy",\
                       "Helium_10TeV_to_100TeV_200perc.npy"]
 
 sample_sets = {"Proton": Proton_filelist, "Helium": Helium_filelist,\
+               "ProtonV15": Proton_v15_filelist,\
                "ProtonFluka": ProtonFluka_filelist, "HeliumFluka": HeliumFluka_filelist,\
                "Lithium7": Lithium7_filelist, "Beryllium9": Beryllium9_filelist,\
                "Proton120": Proton120_filelist, "Proton80": Proton80_filelist,\
