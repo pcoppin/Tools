@@ -680,7 +680,8 @@ def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0):
     if( trigger in ['MIP1','MIP2'] ):
         trigger = 'MIP'
     s_dir = '/Users/pcoppin/Documents/Postdoc/Code/PSD_smearing/Smearing_parameterisations'
-    with open(f"{s_dir}/Skim_{trigger}_fit.pickle", "rb") as f:
+    # with open(f"{s_dir}/Skim_{trigger}_fit.pickle", "rb") as f:
+    with open(f"{}/Skim_{}_fit.pickle".format(s_dir,trigger), "rb") as f:
         splines_SK = pickle.load(f)
     data_popt, data_E, data_y, data_yerr = splines_SK[(sample,PSD_sublayer)][2]
     data_func = lambda E_i: PSD_weight_fit(np.log10(E_i), *data_popt)
@@ -757,7 +758,7 @@ def Reweight_events(z_stop, corr, nbins=1000, z_leftmost=-380, z_rightmost=480):
 
     return [h, pdf_normal, pdf_rescaled, cdf_normal, cdf_rescaled, weights, bins, bin_center]
 
-def Reweight(MCs, rescaling_factor=1., samples=None):
+def Reweight(MCs, rescaling_factor=1., samples=None, Pickle_dir='/Users/pcoppin/Documents/Postdoc/z_classifier/Reweighting/WeightingPickles/'):
     import pickle
     from copy import deepcopy
     if samples is None:
@@ -955,7 +956,7 @@ def Combine_npy_dict(Filelist=[], keys=[],\
             data[key] = 1e-3 * data[key]
     
     # w = data['HE_trigger'] * data["Skimmed"]
-    w = np.ones_like(data["E_total_BGO"], dtype=bool)
+    w = np.ones_like(data['E_p'], dtype=bool)
     for key in filters:
         if( key=='MLcontainmentBGO' ):
             # BGO prediction fiducially contained in BGO
@@ -1007,6 +1008,12 @@ def Combine_npy_dict(Filelist=[], keys=[],\
         data["PSD_charge_STKtrack"] = np.maximum( data['PSD_charge_STKtrack'], 0.0 )
 
     return data
+
+
+
+Proton_StopzTest = [['allProton-v6r0p15_100GeV_1TeV_FTFP-p4.npy',],]
+
+
 
 Proton_filelist = [["allProton-v6r0p10_10GeV_100GeV_FTFP-p2.npy",],\
                    ["allProton-v6r0p10_100GeV_1TeV_FTFP-p1.npy",],\
@@ -1069,7 +1076,8 @@ sample_sets = {"Proton": Proton_filelist, "Helium": Helium_filelist,\
                "Proton120": Proton120_filelist, "Proton80": Proton80_filelist,\
                "Helium120": Helium120_filelist, "Helium80": Helium80_filelist,\
                "Helium200": Helium200_filelist, "HeliumFullSky": HeliumFullSky_filelist,\
-               "Carbon": Carbon_filelist, "Oxygen": Oxygen_filelist}
+               "Carbon": Carbon_filelist, "Oxygen": Oxygen_filelist,\
+               "ProtonStopzTest": Proton_StopzTest}
     
 
 
