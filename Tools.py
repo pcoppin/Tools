@@ -681,7 +681,7 @@ def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0):
         trigger = 'MIP'
     s_dir = '/Users/pcoppin/Documents/Postdoc/Code/PSD_smearing/Smearing_parameterisations'
     # with open(f"{s_dir}/Skim_{trigger}_fit.pickle", "rb") as f:
-    with open(f"{}/Skim_{}_fit.pickle".format(s_dir,trigger), "rb") as f:
+    with open(f"{s_dir}/Skim_{trigger}_fit.pickle", "rb") as f:
         splines_SK = pickle.load(f)
     data_popt, data_E, data_y, data_yerr = splines_SK[(sample,PSD_sublayer)][2]
     data_func = lambda E_i: PSD_weight_fit(np.log10(E_i), *data_popt)
@@ -821,7 +821,7 @@ def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, Only_regular=False):
         dd[sample]["PSD_charge_corr"] = np.zeros( (len(dd[sample]["PSD_charge"]),5), dtype=float)
         E = dd[sample]["E_total_BGO"]
         # No need to redo smearing for p15
-        sample_to_use = sample.replace('_p15','')
+        sample_to_use = sample.replace('_p15','').replace('_old', '')
 
         for i in range(5):
             if( Only_regular and i==4 ):
@@ -868,8 +868,12 @@ def PSD_selection_proton_paper(dd, PSD_charge='Xin'):
         # w_x = (left<dd['charge_x']) * (dd['charge_x']<right)
         # w_y = (left<dd['charge_y']) * (dd['charge_y']<right)
         # return w_x * w_y
-        # Actually in the paper they just require the average of x & y to be in the range
-        return (left<dd['charge_xy']) * (dd['charge_xy']<right)
+        # Actually in the paper they just require the average of x & y to be in the range,
+        #    with addtionally (pre-selection): 1 or more hits in each sub-layer of PSD
+        w = (left<dd['charge_xy']) * (dd['charge_xy']<right)
+        w = w * (dd['charge_x']>0.1) * (dd['charge_y']>0.1)
+        return w
+
     else:
         raise Exception(f'Type of charge: {PSD_charge} unknown')
         return 0
@@ -932,10 +936,12 @@ def Combine_npy_dict(Filelist=[], keys=[],\
             N_i += len(data_i['E_p']) + int( 10 * len(data_i['E_primary_non_trig']) )
         for data_i in data_is:
             data_i['weight'] = (1.0/N_i) * np.ones( len(data_i['E_p'])  )
-        
             if( "10GeV_to_10TeV" in files[0] ):
                 # Weight normally 1 per decade, so total weight is 3 if adding file that spans 3 decades
                 data_i['weight'] *= 3
+            elif( any([x in files[0] for x in ('1GeV_100GeV','100GeV_10TeV')]) ):
+                # Weight normally 1 per decade, so total weight is 3 if adding file that spans 3 decades
+                data_i['weight'] *= 2
             elif( "100TeV_500TeV" in files[0] ):
                 data_i['weight'] *= np.log10(5)
             else:
@@ -1025,6 +1031,9 @@ Proton_p15_filelist = [['allProton-v6r0p15_10GeV_100GeV_FTFP-p3.npy',],\
                        ['allProton-v6r0p15_1TeV_10TeV_FTFP-p3.npy',],\
                        ['allProton-v6r0p15_10TeV_100TeV_FTFP-p2.npy',],\
                        ['allProton-v6r0p15_100TeV_1PeV-EPOSLHC_FTFP.npy','allProton-v6r0p15_100TeV_1PeV-DPMJET3_FTFP.npy']]
+Proton_old_filelist = [["allProton-v6r0p0_1GeV_100GeV_FTFP.npy",],\
+                       ["allProton-v6r0p0_100GeV_10TeV_FTFP_HP.npy",],\
+                       ["allProton-v6r0p0_10TeV_100TeV_FTFP_HP.npy",]]
 ProtonFluka_filelist =[["allProton-v6r0p15_10GeV_100GeV-FLUKA.npy",],\
                        ["allProton-v6r0p15_100GeV_1TeV-FLUKA.npy",],\
                        ["allProton-v6r0p15_1TeV_10TeV-FLUKA.npy",],\
@@ -1071,6 +1080,7 @@ Helium200_filelist = ["Helium_10GeV_to_10TeV_200perc.npy",\
 
 sample_sets = {"Proton": Proton_filelist, "Helium": Helium_filelist,\
                "Proton_p15": Proton_p15_filelist,\
+               "Proton_old": Proton_old_filelist,\
                "ProtonFluka": ProtonFluka_filelist, "HeliumFluka": HeliumFluka_filelist,\
                "Lithium7": Lithium7_filelist, "Beryllium9": Beryllium9_filelist,\
                "Proton120": Proton120_filelist, "Proton80": Proton80_filelist,\
