@@ -25,7 +25,8 @@ Code_folder       = "/mnt/2690D37B90D35043/PhD/Code"
 mpl_style_file    = pwd + "matplotlib_style"
 
 
-colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:pink', 'tab:grey', 'tab:red']
+colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:pink', 'tab:grey', 'tab:red',\
+          'tab:brown', 'tab:olive']
 markers = ['o', 'v', '^', 's', 'd', '*']
 
 def logspace(min_range, max_range, counts):
@@ -764,22 +765,33 @@ def Reweight(MCs, rescaling_factor=1., samples=None, Pickle_dir='/Users/pcoppin/
     if samples is None:
         samples = MCs.keys()
     for sample in samples:
-        Pickle_dir = '/Users/pcoppin/Documents/Postdoc/z_classifier/Reweighting/WeightingPickles/'
-        Pickle_file = '{}_PSD{:04d}_STK{:04d}_BGO{:04d}.pickle'.format(sample,
-                                                                       int(1e3*rescaling_factor[0]),
-                                                                       int(1e3*rescaling_factor[1]),
-                                                                       int(1e3*rescaling_factor[2]))
+        d = MCs[sample]
+        if( rescaling_factor==1 ):
+            if( 'Original_MC_weights' in d ):
+                d['weight'] = d['Original_weight']
+                d['MC_weights'] = d['Original_MC_weights']
+            return None
+
+        Pickle_dir = '/Users/pcoppin/Documents/Postdoc/Code/z_classifier/Reweighting/WeightingPickles/'
+        if( rescaling_factor=='Geant4_to_FLUKA' ):
+            Pickle_file = f'{sample}_Geant4_to_FLUKA.pickle'
+        else:
+            Pickle_file = '{}_PSD{:04d}_STK{:04d}_BGO{:04d}.pickle'.format(sample,
+                                                                           int(1e3*rescaling_factor[0]),
+                                                                           int(1e3*rescaling_factor[1]),
+                                                                           int(1e3*rescaling_factor[2]))
         Pickle_file = Pickle_dir + Pickle_file
         with open(Pickle_file, 'rb') as f:
             interpolator = pickle.load(f)
-        d = MCs[sample]
         x = np.log10( d['E_p'] )
         y = d['pv_cos_theta']
         z = d['stop_z']
         scaling_factor = interpolator(np.dstack((x,y,z)))[0]
         d['scaling_factor'] = scaling_factor
         if 'Original_MC_weights' not in d:
+            d['Original_weight'] = deepcopy(d['weight'])
             d['Original_MC_weights'] = deepcopy(d['MC_weights'])
+        d['weight'] = d['Original_weight'] * scaling_factor
         d['MC_weights'] = d['Original_MC_weights'] * scaling_factor
 
 def STK_selection(dd, primary='Proton', variance_mean=0.3, tight_cuts=False, low_high=None, n_med=None):
@@ -884,7 +896,7 @@ def PSD_selection_helium_paper(dd, PSD_charge='Xin'):
     right = 2.8 + 0.007 * np.power(np.log10(E/10),4)
     if( PSD_charge=='Xin' ):
         q = dd['PSD_charge_corr'][:,4] if 'E_p' in dd else dd['PSD_charge_Xin_pro']
-        return (left<q) * (q<right) * sel_pro_STKtrack
+        return (left<q) * (q<right) * dd['sel_pro_STKtrack']
     elif( PSD_charge=='Mine_x' ):
         return (left<dd['charge_x']) * (dd['charge_x']<right)
     elif( PSD_charge=='Mine_xy' ):
@@ -1031,6 +1043,12 @@ Proton_p15_filelist = [['allProton-v6r0p15_10GeV_100GeV_FTFP-p3.npy',],\
                        ['allProton-v6r0p15_1TeV_10TeV_FTFP-p3.npy',],\
                        ['allProton-v6r0p15_10TeV_100TeV_FTFP-p2.npy',],\
                        ['allProton-v6r0p15_100TeV_1PeV-EPOSLHC_FTFP.npy','allProton-v6r0p15_100TeV_1PeV-DPMJET3_FTFP.npy']]
+Proton_all_filelist = [["allProton-v6r0p10_10GeV_100GeV_FTFP-p2.npy", 'allProton-v6r0p15_10GeV_100GeV_FTFP-p3.npy',],\
+                       ["allProton-v6r0p10_100GeV_1TeV_FTFP-p1.npy", 'allProton-v6r0p15_100GeV_1TeV_FTFP-p4.npy',],\
+                       ["allProton-v6r0p10_1TeV_10TeV_FTFP.npy", 'allProton-v6r0p15_1TeV_10TeV_FTFP-p3.npy',],\
+                       ["allProton-v6r0p10_10TeV_100TeV_FTFP.npy", 'allProton-v6r0p15_10TeV_100TeV_FTFP-p2.npy',],\
+                       ["allProton-v6r0p12_100TeV_1PeV_EPOSLHC_FTFP_BERT.npy",'allProton-v6r0p15_100TeV_1PeV-EPOSLHC_FTFP.npy',\
+                        'allProton-v6r0p15_100TeV_1PeV-DPMJET3_FTFP.npy']]
 Proton_old_filelist = [["allProton-v6r0p0_1GeV_100GeV_FTFP.npy",],\
                        ["allProton-v6r0p0_100GeV_10TeV_FTFP_HP.npy",],\
                        ["allProton-v6r0p0_10TeV_100TeV_FTFP_HP.npy",]]
@@ -1079,7 +1097,7 @@ Helium200_filelist = ["Helium_10GeV_to_10TeV_200perc.npy",\
                       "Helium_10TeV_to_100TeV_200perc.npy"]
 
 sample_sets = {"Proton": Proton_filelist, "Helium": Helium_filelist,\
-               "Proton_p15": Proton_p15_filelist,\
+               "Proton_p15": Proton_p15_filelist, "Proton_all": Proton_all_filelist,\
                "Proton_old": Proton_old_filelist,\
                "ProtonFluka": ProtonFluka_filelist, "HeliumFluka": HeliumFluka_filelist,\
                "Lithium7": Lithium7_filelist, "Beryllium9": Beryllium9_filelist,\
