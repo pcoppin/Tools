@@ -681,7 +681,7 @@ def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0):
         trigger = 'MIP'
     s_dir = '/Users/pcoppin/Documents/Postdoc/Code/PSD_smearing/Smearing_parameterisations'
     # with open(f"{s_dir}/Skim_{trigger}_fit.pickle", "rb") as f:
-    with open(f"{}/Skim_{}_fit.pickle".format(s_dir,trigger), "rb") as f:
+    with open("{}/Skim_{}_fit.pickle".format(s_dir,trigger), "rb") as f:
         splines_SK = pickle.load(f)
     data_popt, data_E, data_y, data_yerr = splines_SK[(sample,PSD_sublayer)][2]
     data_func = lambda E_i: PSD_weight_fit(np.log10(E_i), *data_popt)
@@ -811,10 +811,10 @@ def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, Only_regular=False):
     if( trigger in ['MIP1','MIP2'] ):
         trigger = 'MIP'
     import pickle
-    splines_dir = '/Users/pcoppin/Documents/Postdoc/Code/PSD_smearing/Smearing_parameterisations/'
-    with open(splines_dir+f"MC_{trigger}_fit.pickle", "rb") as f:
+    splines_dir = '/local/coppinp/Code/PSD_smearing/Smearing_parameterisations/'
+    with open(splines_dir+"MC_{}_fit.pickle".format(trigger), "rb") as f:
         splines_MC = pickle.load(f)
-    with open(splines_dir+f"Skim_{trigger}_fit.pickle", "rb") as f:
+    with open(splines_dir+"Skim_{}_fit.pickle".format(trigger), "rb") as f:
         splines_SK = pickle.load(f)
 
     for sample in MC_samples:
@@ -841,7 +841,7 @@ def PSD_selection(dd, trigger, sample, sigma_left=-5, sigma_right=3):
 
     import pickle
     splines_dir = '/Users/pcoppin/Documents/Postdoc/Code/PSD_smearing/Smearing_parameterisations/'
-    splines_file = f"MC_{trigger}_fit.pickle" if 'E_p' in dd else f"Skim_{trigger}_fit.pickle"
+    splines_file = "MC_{}_fit.pickle".format(trigger) if 'E_p' in dd else "Skim_{}_fit.pickle".format(trigger)
     with open(splines_dir+splines_file, "rb") as f:
         splines = pickle.load(f)
 
@@ -871,7 +871,7 @@ def PSD_selection_proton_paper(dd, PSD_charge='Xin'):
         # Actually in the paper they just require the average of x & y to be in the range
         return (left<dd['charge_xy']) * (dd['charge_xy']<right)
     else:
-        raise Exception(f'Type of charge: {PSD_charge} unknown')
+        raise Exception('Type of charge: {} unknown'.format(PSD_charge))
         return 0
 
 def PSD_selection_helium_paper(dd, PSD_charge='Xin'):
@@ -889,7 +889,7 @@ def PSD_selection_helium_paper(dd, PSD_charge='Xin'):
         ratio = dd['charge_x']/dd['charge_y']
         return w_x * w_y * (ratio>0.5) * (ratio<2)
     else:
-        raise Exception(f'Type of charge: {PSD_charge} unknown')
+        raise Exception('Type of charge: {} unknown'.format(PSD_charge))
         return 0
 
 def Combine_npy_dict(Filelist=[], keys=[],\
@@ -926,7 +926,8 @@ def Combine_npy_dict(Filelist=[], keys=[],\
 
         if( 'E_total_BGO_quench' in data_is[0] ):
             if( 'E_total_BGO_quench' not in keys ):
-                keys = ['E_total_BGO_quench', *keys]
+                keys = list(keys)
+                keys.append('E_total_BGO_quench')
         N_i = 0
         for data_i in data_is:
             N_i += len(data_i['E_p']) + int( 10 * len(data_i['E_primary_non_trig']) )
