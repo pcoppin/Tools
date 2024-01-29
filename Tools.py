@@ -21,7 +21,7 @@ pwd = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 sr_to_deg2        = (180/np.pi)**2
 Sky_in_square_deg = 4*np.pi * sr_to_deg2
-Code_folder       = "/mnt/2690D37B90D35043/PhD/Code"
+Code_folder       = "/local/coppinp/Code/"
 mpl_style_file    = pwd + "matplotlib_style"
 
 
@@ -680,7 +680,7 @@ def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0):
     # Smearing splines for MIP are for x and y
     if( trigger in ['MIP1','MIP2'] ):
         trigger = 'MIP'
-    s_dir = '/Users/pcoppin/Documents/Postdoc/Code/PSD_smearing/Smearing_parameterisations'
+    s_dir = '/local/coppinp/Code/PSD_smearing/Smearing_parameterisations'
     # with open(f"{s_dir}/Skim_{trigger}_fit.pickle", "rb") as f:
     with open("{}/Skim_{}_fit.pickle".format(s_dir,trigger), "rb") as f:
         splines_SK = pickle.load(f)
@@ -759,7 +759,7 @@ def Reweight_events(z_stop, corr, nbins=1000, z_leftmost=-380, z_rightmost=480):
 
     return [h, pdf_normal, pdf_rescaled, cdf_normal, cdf_rescaled, weights, bins, bin_center]
 
-def Reweight(MCs, rescaling_factor=1., samples=None, Pickle_dir='/Users/pcoppin/Documents/Postdoc/z_classifier/Reweighting/WeightingPickles/'):
+def Reweight(MCs, rescaling_factor=1., samples=None):
     import pickle
     from copy import deepcopy
     if samples is None:
@@ -772,11 +772,11 @@ def Reweight(MCs, rescaling_factor=1., samples=None, Pickle_dir='/Users/pcoppin/
                 d['MC_weights'] = d['Original_MC_weights']
             return None
 
-        Pickle_dir = '/Users/pcoppin/Documents/Postdoc/Code/z_classifier/Reweighting/WeightingPickles/'
+        Pickle_dir = Code_folder + 'z_classifier/Reweighting/WeightingPickles/'
         if( rescaling_factor=='Geant4_to_FLUKA' ):
-            Pickle_file = f'{sample}_Geant4_to_FLUKA.pickle'
+            Pickle_file = '{}_Geant4_to_FLUKA.pickle'.format(sample)
         else:
-            Pickle_file = '{}_PSD{:04d}_STK{:04d}_BGO{:04d}.pickle'.format(sample,
+            Pickle_file = '{}_PSD{:04d}_STK{:04d}_BGO{:04d}.pickle'.format(sample.replace('_p15',''),
                                                                            int(1e3*rescaling_factor[0]),
                                                                            int(1e3*rescaling_factor[1]),
                                                                            int(1e3*rescaling_factor[2]))
@@ -852,7 +852,7 @@ def PSD_selection(dd, trigger, sample, sigma_left=-5, sigma_right=3):
     idx = 4 # Using Xin's charge for now
 
     import pickle
-    splines_dir = '/Users/pcoppin/Documents/Postdoc/Code/PSD_smearing/Smearing_parameterisations/'
+    splines_dir = Code_folder + 'PSD_smearing/Smearing_parameterisations/'
     splines_file = "MC_{}_fit.pickle".format(trigger) if 'E_p' in dd else "Skim_{}_fit.pickle".format(trigger)
     with open(splines_dir+splines_file, "rb") as f:
         splines = pickle.load(f)
@@ -1028,12 +1028,6 @@ def Combine_npy_dict(Filelist=[], keys=[],\
 
     return data
 
-
-
-Proton_StopzTest = [['allProton-v6r0p15_100GeV_1TeV_FTFP-p4.npy',],]
-
-
-
 Proton_filelist = [["allProton-v6r0p10_10GeV_100GeV_FTFP-p2.npy",],\
                    ["allProton-v6r0p10_100GeV_1TeV_FTFP-p1.npy",],\
                    ["allProton-v6r0p10_1TeV_10TeV_FTFP.npy",],\
@@ -1105,8 +1099,7 @@ sample_sets = {"Proton": Proton_filelist, "Helium": Helium_filelist,\
                "Proton120": Proton120_filelist, "Proton80": Proton80_filelist,\
                "Helium120": Helium120_filelist, "Helium80": Helium80_filelist,\
                "Helium200": Helium200_filelist, "HeliumFullSky": HeliumFullSky_filelist,\
-               "Carbon": Carbon_filelist, "Oxygen": Oxygen_filelist,\
-               "ProtonStopzTest": Proton_StopzTest}
+               "Carbon": Carbon_filelist, "Oxygen": Oxygen_filelist}
     
 
 
