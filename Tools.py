@@ -28,6 +28,7 @@ mpl_style_file    = pwd + "matplotlib_style"
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:pink', 'tab:grey', 'tab:red',\
           'tab:brown', 'tab:olive']
 markers = ['o', 'v', '^', 's', 'd', '*']
+linestyles = ['-', '--', '-.', ':']
 
 def logspace(min_range, max_range, counts):
     return np.logspace(np.log10(min_range), np.log10(max_range), counts)
@@ -540,6 +541,9 @@ def Central_energy(E1, E2, g=-2.65):
 
 def Rigidity_to_kinetic_energy(rigidity, charge=1, mass=0.931):
     return np.sqrt(np.power(charge,2)*np.power(rigidity,2)+mass**2) - mass
+
+def Kinetic_energy_to_rigidity(Ekin, charge=1, mass=0.931):
+    return np.sqrt(np.power(Ekin+mass,2)-mass**2)/charge
 
 class Hist(object):
     def __init__(self, data, log=False, height=False, **kw):
@@ -1099,7 +1103,8 @@ sample_sets = {"Proton": Proton_filelist, "Helium": Helium_filelist,\
                "Proton120": Proton120_filelist, "Proton80": Proton80_filelist,\
                "Helium120": Helium120_filelist, "Helium80": Helium80_filelist,\
                "Helium200": Helium200_filelist, "HeliumFullSky": HeliumFullSky_filelist,\
-               "Carbon": Carbon_filelist, "Oxygen": Oxygen_filelist}
+               "Carbon": Carbon_filelist, "Oxygen": Oxygen_filelist,
+               'ProtonFluka_fluka': [['Fluka_Proton_fluka/'+x[0],] for x in ProtonFluka_filelist]} ############  TEMP DELETE AGAIN
     
 
 
