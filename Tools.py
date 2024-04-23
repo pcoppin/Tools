@@ -21,7 +21,7 @@ pwd = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 sr_to_deg2        = (180/np.pi)**2
 Sky_in_square_deg = 4*np.pi * sr_to_deg2
-Code_folder       = "/local/coppinp/Code/"
+Code_folder       = "/USERS/coppinp/Code/"
 mpl_style_file    = pwd + "matplotlib_style"
 
 
@@ -684,7 +684,7 @@ def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0):
     # Smearing splines for MIP are for x and y
     if( trigger in ['MIP1','MIP2'] ):
         trigger = 'MIP'
-    s_dir = '/local/coppinp/Code/PSD_smearing/Smearing_parameterisations'
+    s_dir = Code_folder + 'PSD_smearing/Smearing_parameterisations'
     # with open(f"{s_dir}/Skim_{trigger}_fit.pickle", "rb") as f:
     with open("{}/Skim_{}_fit.pickle".format(s_dir,trigger), "rb") as f:
         splines_SK = pickle.load(f)
@@ -763,11 +763,13 @@ def Reweight_events(z_stop, corr, nbins=1000, z_leftmost=-380, z_rightmost=480):
 
     return [h, pdf_normal, pdf_rescaled, cdf_normal, cdf_rescaled, weights, bins, bin_center]
 
-def Reweight(MCs, rescaling_factor=1., samples=None):
+def Reweight(MCs, rescaling_factor=1., samples=None, Pickle_dir=None):
     import pickle
     from copy import deepcopy
     if samples is None:
         samples = MCs.keys()
+    if( Pickle_dir is None ):
+        Pickle_dir = Code_folder + 'z_classifier/Reweighting/WeightingPickles/'
     for sample in samples:
         d = MCs[sample]
         if( rescaling_factor==1 ):
@@ -775,8 +777,6 @@ def Reweight(MCs, rescaling_factor=1., samples=None):
                 d['weight'] = d['Original_weight']
                 d['MC_weights'] = d['Original_MC_weights']
             return None
-
-        Pickle_dir = Code_folder + 'z_classifier/Reweighting/WeightingPickles/'
         if( rescaling_factor=='Geant4_to_FLUKA' ):
             Pickle_file = '{}_Geant4_to_FLUKA.pickle'.format(sample)
         else:
@@ -827,7 +827,7 @@ def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, Only_regular=False):
     if( trigger in ['MIP1','MIP2'] ):
         trigger = 'MIP'
     import pickle
-    splines_dir = '/local/coppinp/Code/PSD_smearing/Smearing_parameterisations/'
+    splines_dir = Code_folder + 'PSD_smearing/Smearing_parameterisations/'
     with open(splines_dir+"MC_{}_fit.pickle".format(trigger), "rb") as f:
         splines_MC = pickle.load(f)
     with open(splines_dir+"Skim_{}_fit.pickle".format(trigger), "rb") as f:
