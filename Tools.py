@@ -28,7 +28,7 @@ mpl_style_file    = pwd + "matplotlib_style"
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:pink', 'tab:grey', 'tab:red',\
           'tab:brown', 'tab:olive']
 markers = ['o', 'v', '^', 's', 'd', '*']
-linestyles = ['-', '--', '-.', ':']
+linestyles = ['-', '--', ':', '-.']
 
 def logspace(min_range, max_range, counts):
     return np.logspace(np.log10(min_range), np.log10(max_range), counts)
@@ -482,10 +482,12 @@ def Print_rounded(a, b):
     '''
     log_base = int(np.floor(np.log10(b)))
     if( log_base==0 ):
-        return r"{:.1f} +-{:4.1f}".format(a,b)
+        return r"${:.1f} \pm{:4.1f}$".format(a,b)
+    elif( log_base==1 ):
+        return r"${:.0f} \pm{:4.0f}$".format(a,b)
     else:
         x, y = np.array([a,b])/np.power(10.0, log_base)
-        return r"( {:.1f} +-{:4.1f} ) x 10^{:d}".format(x, y, log_base)
+        return r"$\left({:.1f} \pm{:4.1f}\right)\cdot 10^{:d}$".format(x, y, log_base)
     return log_base
 
 def Plot_skymap(prior):
@@ -500,7 +502,8 @@ def Plot_skymap(prior):
     fig = plt.figure(figsize=(15,7.5))
     subpl = plt.subplot(111, projection='mollweide')
     max_weight = max(weights)
-    sc = subpl.scatter( np.pi-Pixel_pos_RA, Pixel_pos_DEC, c=[max(max_weight*1e-8, w) for w in weights], norm=matplotlib.colors.LogNorm(vmin=max_weight*1e-7, clip=True) )
+    sc = subpl.scatter(np.pi-Pixel_pos_RA, Pixel_pos_DEC, c=[max(max_weight*1e-8, w) for w in weights],
+                       norm=matplotlib.colors.LogNorm(vmin=max_weight*1e-7, clip=True) )
     Fermi_ticks = np.array(range(360,-1 ,-30))
     Fermi_ticks_l = list(Fermi_ticks)
     Fermi_ticks_l[0]  = ""
@@ -631,9 +634,15 @@ class Hist(object):
         else:
             mask = height>0
             plot = ax.bar(self.bins[:-1][mask], height[mask], self.bin_width[mask], align='edge', **kw)
-        ax.ylabel(ylabel)
+        try:
+            ax.ylabel(ylabel)
+        except:
+            ax.set_ylabel(ylabel)
         if( self.log ):
-            ax.xscale("log")
+            try:
+                ax.xscale("log")
+            except:
+                ax.set_xscale('log')
         return plot
     
     def plot_errorbar(self, ax=plt, type="hist", linestyle="None", fmt=".", markersize=10, **kw):
@@ -697,7 +706,7 @@ def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0):
     res = data_func(E_BGO)
     w = E_BGO>data_E[-1]
     res[w] = data_func(data_E[-1])
-    return res
+    return np.maximum(res,0)
 
 def Helium_to_ProtonPlusHelium(E_BGO):
     return 1 - Proton_to_ProtonPlusHelium(E_BGO)
@@ -787,10 +796,12 @@ def Reweight(MCs, rescaling_factor=1., samples=None, Pickle_dir=None):
         elif( rescaling_factor=='Correct_to_measured' ):
             Pickle_file = '{}_to_Measured.pickle'.format(sample_short)
         else:
-            Pickle_file = '{}_PSD{:04d}_STK{:04d}_BGO{:04d}.pickle'.format(sample_short,
+            dummy = sample.replace('_p12','').replace('_p15','').replace('_TargetDiffraction','').replace('_FullDiffraction','')
+            Pickle_file = '{}_PSD{:04d}_STK{:04d}_BGO{:04d}.pickle'.format(dummy,
                                                                            int(1e3*rescaling_factor[0]),
                                                                            int(1e3*rescaling_factor[1]),
                                                                            int(1e3*rescaling_factor[2]))
+
         Pickle_file = Pickle_dir + Pickle_file
         with open(Pickle_file, 'rb') as f:
             interpolator = pickle.load(f)
@@ -919,6 +930,57 @@ def PSD_selection_helium_paper(dd, PSD_charge='Xin'):
         raise Exception('Type of charge: {} unknown'.format(PSD_charge))
         return 0
 
+
+
+def G4_frac_quasielastic(E):
+    ### These values are derived from the Hadr03 examples
+    ### See Code/GeantExamples/Processing_Hadr03_output on gridvm10
+    xx = np.array([   10.        ,    12.58925412,    15.84893192,    19.95262315,
+                      25.11886432,    31.6227766 ,    39.81071706,    50.11872336,
+                      63.09573445,    79.43282347,   100.        ,   125.89254118,
+                      158.48931925,   199.5262315 ,   251.18864315,   316.22776602,
+                      398.10717055,   501.18723363,   630.95734448,   794.32823472,
+                      1000.        ,  1258.92541179,  1584.89319246,  1995.26231497,
+                      2511.88643151,  3162.27766017,  3981.07170553,  5011.87233627,
+                      6309.5734448 ,  7943.28234724, 10000.        ])
+    yy = np.array([0.1047   , 0.097465 , 0.0903725, 0.0842575, 0.07878  , 0.07443  ,
+                   0.07056  , 0.0670775, 0.064135 , 0.06161  , 0.0595825, 0.05796  ,
+                   0.056615 , 0.055525 , 0.0546475, 0.0538575, 0.05335  , 0.0529325,
+                   0.052575 , 0.0523   , 0.052085 , 0.052015 , 0.0519725, 0.0520275,
+                   0.05197  , 0.0520675, 0.0523225, 0.052495 , 0.0525175, 0.052765 ,
+                   0.052995 ])
+    return np.interp(np.log10(E), np.log10(xx), 1-np.array(yy))
+
+def Corr_XS_G4(E):
+    ### Method based on stop-z
+    #   Taking ratio of particle that interact per layer (corrected over non-corrected)
+    from scipy.interpolate import BSpline
+    tck = (np.array([ 2.41771435,  2.41771435,  2.41771435,  2.41771435,  4.72029944, 7.02288453,  9.32546963,
+                     10.47676217, 11.39779621, 11.39779621, 11.39779621, 11.39779621]),
+           np.array([0.90601885, 0.92068368, 0.94567574, 0.94578798, 0.94624133, 0.94477405, 0.94316579, 0.94216731,
+                     0.        , 0.        , 0.        , 0.        ]), 3)
+    res = BSpline(*tck)(np.log(E))
+    w = E<1.12201845e+01
+    res[w] = BSpline(*tck)(np.log(1.12201845e+01))
+    w = E>8.91250938e+04
+    res[w] = BSpline(*tck)(np.log(8.91250938e+04))
+    return res
+def Corr_XS_G4_4(E, E_cut1=10, E_cut2 = 1e5):
+    ### Method based on stop-z-2 (corrected based on pion/kaon in secondaries)
+    #   Taking ratio of particle that interact per layer (corrected over non-corrected)
+    from scipy.interpolate import BSpline
+    tck = (np.array([2.5328436 ,  2.5328436 ,  2.5328436 ,  2.5328436 , 11.28266696,
+                     11.28266696, 11.28266696, 11.28266696]),
+           np.array([0.91478609, 0.97444726, 0.94366919, 0.95085184, 0.        ,
+                     0.        , 0.        , 0.        ]), 3)
+    res = BSpline(*tck)(np.log(E))
+    w = E<E_cut1
+    res[w] = BSpline(*tck)(np.log(E_cut1))
+    w = E>E_cut2
+    res[w] = BSpline(*tck)(np.log(E_cut2))
+    return res
+
+
 def Combine_npy_dict(Filelist=[], keys=[],\
                      filters=['HE_trigger','NonZeroPSD','MLcontainmentBGO','MLcontainmentSTK','skim'],\
                      npy_dir="/dpnc/beegfs/users/coppinp/Simu_vary_cross_section_with_Geant4/Analysis/npy_files/",):
@@ -960,10 +1022,10 @@ def Combine_npy_dict(Filelist=[], keys=[],\
             N_i += len(data_i['E_p']) + int( 10 * len(data_i['E_primary_non_trig']) )
         for data_i in data_is:
             data_i['weight'] = (1.0/N_i) * np.ones( len(data_i['E_p'])  )
-            if( "10GeV_to_10TeV" in files[0] ):
+            if( any([x in files[0] for x in ['1GeV_1TeV','10GeV_10TeV','100GeV_100TeV']]) ):
                 # Weight normally 1 per decade, so total weight is 3 if adding file that spans 3 decades
                 data_i['weight'] *= 3
-            elif( any([x in files[0] for x in ('1GeV_100GeV','100GeV_10TeV')]) ):
+            elif( any([x in files[0] for x in ('1GeV_100GeV','10GeV_1TeV','100GeV_10TeV','1TeV_100TeV','10TeV_1PeV')]) ):
                 # Weight normally 1 per decade, so total weight is 3 if adding file that spans 3 decades
                 data_i['weight'] *= 2
             elif( "100TeV_500TeV" in files[0] ):
@@ -1026,6 +1088,7 @@ def Combine_npy_dict(Filelist=[], keys=[],\
             w = w * (data['MIP1_trigger']+data['MIP2_trigger'])
         else:
             w = w * data[key]
+            
     for key in data:
         if( key=="E_primary_non_trig" ):
             continue
@@ -1104,21 +1167,30 @@ Oxygen_filelist = [["allO16-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0.npy",],\
                    ["allO16-v6r0p15_10TeV_100TeV-EPOSLHC_FTFP.npy",],\
                    ["allO16-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP.npy",]]
 
-HeliumFullSky_filelist = ["Helium_10GeV_to_10TeV_FullSky.npy"]
-Proton80_filelist = ["Proton_10GeV_to_10TeV_80perc.npy",\
-                     "Proton_10TeV_to_100TeV_80perc.npy"]
-Proton120_filelist = ["Proton_10GeV_to_10TeV_120perc.npy",\
-                      "Proton_10TeV_to_100TeV_120perc.npy"]
-Helium80_filelist = ["Helium_10GeV_to_10TeV_80perc.npy",\
-                     "Helium_10TeV_to_100TeV_80perc.npy"]
-Helium120_filelist = ["Helium_10GeV_to_10TeV_120perc.npy",\
-                      "Helium_10TeV_to_100TeV_120perc.npy"]
-Helium200_filelist = ["Helium_10GeV_to_10TeV_200perc.npy",\
-                      "Helium_10TeV_to_100TeV_200perc.npy"]
+
+HeliumFullSky_filelist = ["Helium_10GeV_10TeV_FullSky.npy"]
+Proton80_filelist = ["Proton_10GeV_10TeV_80perc.npy",\
+                     "Proton_10TeV_100TeV_80perc.npy"]
+Proton120_filelist = ["Proton_10GeV_10TeV_120perc.npy",\
+                      "Proton_10TeV_100TeV_120perc.npy"]
+Helium80_filelist = ["Helium_10GeV_10TeV_80perc.npy",\
+                     "Helium_10TeV_100TeV_80perc.npy"]
+Helium120_filelist = ["Helium_10GeV_10TeV_120perc.npy",\
+                      "Helium_10TeV_100TeV_120perc.npy"]
+Helium200_filelist = ["Helium_10GeV_10TeV_200perc.npy",\
+                      "Helium_10TeV_100TeV_200perc.npy"]
+
+Proton_TargetDiffraction_filelist = [["allProton-v6r0p15_1GeV_1TeV_FTFP_DiffractionOn.npy",],\
+                                     ["allProton-v6r0p15_1TeV_100TeV_FTFP_DiffractionOn.npy",]]
+Helium_TargetDiffraction_filelist = [["allHe4-v6r0p15_1GeV_1TeV_FTFP_DiffractionOn.npy",],\
+                                     ["allHe4-v6r0p15_1TeV_100TeV_FTFP_DiffractionOn.npy",]]
+Proton_FullDiffraction_filelist = [["allProton-v6r0p15_1GeV_1TeV_FTFP_FullDiffractionOn.npy",],]
 
 sample_sets = {"Proton": Proton_filelist, "Proton_p15": Proton_p15_filelist, "Proton_all": Proton_all_filelist,\
                "Helium": Helium_filelist, "Helium_p12": Helium_p12_filelist, "Helium_all": Helium_all_filelist,\
                "Proton_old": Proton_old_filelist,\
+               "Proton_TargetDiffraction": Proton_TargetDiffraction_filelist, "Helium_TargetDiffraction": Helium_TargetDiffraction_filelist,\
+               "Proton_FullDiffraction": Proton_FullDiffraction_filelist,\
                "ProtonFluka": ProtonFluka_filelist, "HeliumFluka": HeliumFluka_filelist,\
                "Lithium7": Lithium7_filelist, "Beryllium9": Beryllium9_filelist,\
                "Proton120": Proton120_filelist, "Proton80": Proton80_filelist,\
