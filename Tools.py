@@ -21,7 +21,7 @@ pwd = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 sr_to_deg2        = (180/np.pi)**2
 Sky_in_square_deg = 4*np.pi * sr_to_deg2
-Code_folder       = "/USERS/coppinp/Code/"
+Code_folder       = "/Users/pcoppin/Documents/Postdoc/Code/"
 mpl_style_file    = pwd + "matplotlib_style"
 
 
@@ -681,6 +681,7 @@ def PSD_weight_fit(loge, *p):
     return p[0] + p[1]*loge + p[2]*np.power(loge,2) + p[3]*np.power(loge,p[4])
 
 def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0):
+    from scipy.interpolate import BSpline
     # Smearing splines for MIP are for x and y
     if( trigger in ['MIP1','MIP2'] ):
         trigger = 'MIP'
@@ -688,8 +689,11 @@ def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0):
     # with open(f"{s_dir}/Skim_{trigger}_fit.pickle", "rb") as f:
     with open("{}/Skim_{}_fit.pickle".format(s_dir,trigger), "rb") as f:
         splines_SK = pickle.load(f)
-    data_popt, data_E, data_y, data_yerr = splines_SK[(sample,PSD_sublayer)][2]
-    data_func = lambda E_i: PSD_weight_fit(np.log10(E_i), *data_popt)
+    # data_popt, data_E, data_y, data_yerr = splines_SK[(sample,PSD_sublayer)][2]
+    # data_func = lambda E_i: PSD_weight_fit(np.log10(E_i), *data_popt)
+    tckp, data_E, data_y, data_yerr = splines_SK[(sample,PSD_sublayer)][2]
+    data_func = lambda E_i: BSpline(*tckp)(np.log10(E_i))
+
     res = data_func(E_BGO)
     w = E_BGO>data_E[-1]
     res[w] = data_func(data_E[-1])
@@ -777,10 +781,13 @@ def Reweight(MCs, rescaling_factor=1., samples=None, Pickle_dir=None):
                 d['weight'] = d['Original_weight']
                 d['MC_weights'] = d['Original_MC_weights']
             return None
+        sample_short = sample.replace('_p15','').replace('_p12','').replace('_all','')
         if( rescaling_factor=='Geant4_to_FLUKA' ):
-            Pickle_file = '{}_Geant4_to_FLUKA.pickle'.format(sample)
+            Pickle_file = '{}_Geant4_to_FLUKA.pickle'.format(sample_short)
+        elif( rescaling_factor=='Correct_to_measured' ):
+            Pickle_file = '{}_to_Measured.pickle'.format(sample_short)
         else:
-            Pickle_file = '{}_PSD{:04d}_STK{:04d}_BGO{:04d}.pickle'.format(sample.replace('_p15',''),
+            Pickle_file = '{}_PSD{:04d}_STK{:04d}_BGO{:04d}.pickle'.format(sample_short,
                                                                            int(1e3*rescaling_factor[0]),
                                                                            int(1e3*rescaling_factor[1]),
                                                                            int(1e3*rescaling_factor[2]))
@@ -837,7 +844,7 @@ def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, Only_regular=False):
         dd[sample]["PSD_charge_corr"] = np.zeros( (len(dd[sample]["PSD_charge"]),5), dtype=float)
         E = dd[sample]["E_total_BGO"]
         # No need to redo smearing for p15
-        sample_to_use = sample.replace('_p15','').replace('_old', '')
+        sample_to_use = sample.replace('_p15','').replace('_p12','').replace('_old', '')
 
         for i in range(5):
             if( Only_regular and i==4 ):
@@ -944,10 +951,10 @@ def Combine_npy_dict(Filelist=[], keys=[],\
         #print(f)
         data_is = [np.load(npy_dir+f, allow_pickle=True, encoding="latin1").item() for f in files]
 
-        if( 'E_total_BGO_quench' in data_is[0] ):
-            if( 'E_total_BGO_quench' not in keys ):
-                keys = list(keys)
-                keys.append('E_total_BGO_quench')
+        # if( 'E_total_BGO_quench' in data_is[0] ):
+        #     if( 'E_total_BGO_quench' not in keys ):
+        #         keys = list(keys)
+        #         keys.append('E_total_BGO_quench')
         N_i = 0
         for data_i in data_is:
             N_i += len(data_i['E_p']) + int( 10 * len(data_i['E_primary_non_trig']) )
@@ -1037,12 +1044,14 @@ Proton_filelist = [["allProton-v6r0p10_10GeV_100GeV_FTFP-p2.npy",],\
                    ["allProton-v6r0p10_1TeV_10TeV_FTFP.npy",],\
                    ["allProton-v6r0p10_10TeV_100TeV_FTFP.npy",],\
                    ["allProton-v6r0p12_100TeV_1PeV_EPOSLHC_FTFP_BERT.npy",]]
-Proton_p15_filelist = [['allProton-v6r0p15_10GeV_100GeV_FTFP-p3.npy',],\
+Proton_p15_filelist = [["allProton-v6r0p15_1GeV_10GeV_FTFP.npy",],\
+                       ['allProton-v6r0p15_10GeV_100GeV_FTFP-p3.npy',],\
                        ['allProton-v6r0p15_100GeV_1TeV_FTFP-p4.npy',],\
                        ['allProton-v6r0p15_1TeV_10TeV_FTFP-p3.npy',],\
                        ['allProton-v6r0p15_10TeV_100TeV_FTFP-p2.npy',],\
                        ['allProton-v6r0p15_100TeV_1PeV-EPOSLHC_FTFP.npy','allProton-v6r0p15_100TeV_1PeV-DPMJET3_FTFP.npy']]
-Proton_all_filelist = [["allProton-v6r0p10_10GeV_100GeV_FTFP-p2.npy", 'allProton-v6r0p15_10GeV_100GeV_FTFP-p3.npy',],\
+Proton_all_filelist = [["allProton-v6r0p15_1GeV_10GeV_FTFP.npy",],\
+                       ["allProton-v6r0p10_10GeV_100GeV_FTFP-p2.npy", 'allProton-v6r0p15_10GeV_100GeV_FTFP-p3.npy',],\
                        ["allProton-v6r0p10_100GeV_1TeV_FTFP-p1.npy", 'allProton-v6r0p15_100GeV_1TeV_FTFP-p4.npy',],\
                        ["allProton-v6r0p10_1TeV_10TeV_FTFP.npy", 'allProton-v6r0p15_1TeV_10TeV_FTFP-p3.npy',],\
                        ["allProton-v6r0p10_10TeV_100TeV_FTFP.npy", 'allProton-v6r0p15_10TeV_100TeV_FTFP-p2.npy',],\
@@ -1051,7 +1060,8 @@ Proton_all_filelist = [["allProton-v6r0p10_10GeV_100GeV_FTFP-p2.npy", 'allProton
 Proton_old_filelist = [["allProton-v6r0p0_1GeV_100GeV_FTFP.npy",],\
                        ["allProton-v6r0p0_100GeV_10TeV_FTFP_HP.npy",],\
                        ["allProton-v6r0p0_10TeV_100TeV_FTFP_HP.npy",]]
-ProtonFluka_filelist =[["allProton-v6r0p15_10GeV_100GeV-FLUKA.npy",],\
+ProtonFluka_filelist =[["allProton-v6r0p15_1GeV_10GeV_FLUKA.npy",],\
+                       ["allProton-v6r0p15_10GeV_100GeV-FLUKA.npy",],\
                        ["allProton-v6r0p15_100GeV_1TeV-FLUKA.npy",],\
                        ["allProton-v6r0p15_1TeV_10TeV-FLUKA.npy",],\
                        ["allProton-v6r0p15_10TeV_100TeV-FLUKA.npy",],\
@@ -1061,7 +1071,20 @@ Helium_filelist = [["allHe4-v6r0p10_10GeV_100GeV_FTFP.npy",],\
                    ["allHe4-v6r0p10_1TeV_10TeV-FTFP.npy",],\
                    ["allHe4-v6r0p10_10TeV_100TeV-FTFP.npy",],\
                    ["allHe4-v6r0p10_100TeV_500TeV-EPOSLHC.npy",]]
-HeliumFluka_filelist = [["allHe4-v6r0p10_10GeV_100GeV-FLUKA.npy",],\
+Helium_p12_filelist = [['allHe4-v6r0p15_1GeV_10GeV_FTFP.npy',],
+                       ["allHe4-v6r0p12_10GeV_100GeV-FTFP_BGO_Quenching.npy",],\
+                       ["allHe4-v6r0p12_100GeV_1TeV-FTFP_BGO_Quenching.npy",],\
+                       ["allHe4-v6r0p12_1TeV_10TeV-FTFP-BGO_Quenching.npy",],\
+                       ["allHe4-v6r0p12_10TeV_100TeV-FTFP_BGO_Quenching.npy",],\
+                       ["allHe4-v6r0p12_100TeV_500TeV-EPOSLHC_reg-p1-p2.npy",]]
+Helium_all_filelist = [['allHe4-v6r0p15_1GeV_10GeV_FTFP.npy',],
+                       ["allHe4-v6r0p10_10GeV_100GeV_FTFP.npy","allHe4-v6r0p12_10GeV_100GeV-FTFP_BGO_Quenching.npy"],\
+                       ["allHe4-v6r0p10_100GeV_1TeV_FTFP.npy","allHe4-v6r0p12_100GeV_1TeV-FTFP_BGO_Quenching.npy"],\
+                       ["allHe4-v6r0p10_1TeV_10TeV-FTFP.npy","allHe4-v6r0p12_1TeV_10TeV-FTFP-BGO_Quenching.npy"],\
+                       ["allHe4-v6r0p10_10TeV_100TeV-FTFP.npy","allHe4-v6r0p12_10TeV_100TeV-FTFP_BGO_Quenching.npy"],\
+                       ["allHe4-v6r0p10_100TeV_500TeV-EPOSLHC.npy","allHe4-v6r0p12_100TeV_500TeV-EPOSLHC_reg-p1-p2.npy"]]
+HeliumFluka_filelist = [["allHe4-v6r0p15_1GeV_10GeV_FLUKA.npy",],\
+                        ["allHe4-v6r0p10_10GeV_100GeV-FLUKA.npy",],\
                         ["allHe4-v6r0p10_100GeV_1TeV-FLUKA.npy",],\
                         ["allHe4-v6r0p10_1TeV_10TeV-FLUKA.npy",],\
                         ["allHe4-v6r0p10_10TeV_100TeV-FLUKA-p1.npy",],\
@@ -1072,12 +1095,10 @@ Lithium7_filelist = [["allLi7-v6r0p10_10GeV_100GeV_QGSP.npy",],\
 Beryllium9_filelist = [["allBe9-v6r0p10_10GeV_100GeV_QGSP.npy",],\
                        ["allBe9-v6r0p10_100GeV_1TeV_FTFP-p1.npy",],\
                        ["allBe9-v6r0p10_1TeV_10TeV-FTFP.npy",]]
-
 Carbon_filelist = [["allC12-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0.npy",],\
                    ["allC12-v6r0p13-reco-v6r0p15_1TeV_10TeV-FTFP.npy",],\
                    ["allC12-v6r0p15_10TeV_100TeV_FTFP-BGO-Quenching-p0.npy",],\
                    ["allC12-v6r0p15_100TeV_500TeV_EPOSLHC_FTFP.npy",]]
-
 Oxygen_filelist = [["allO16-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0.npy",],\
                    ["allO16-v6r0p15_1TeV_10TeV_FTFP-BGO-Quenching-p0.npy",],\
                    ["allO16-v6r0p15_10TeV_100TeV-EPOSLHC_FTFP.npy",],\
@@ -1095,16 +1116,14 @@ Helium120_filelist = ["Helium_10GeV_to_10TeV_120perc.npy",\
 Helium200_filelist = ["Helium_10GeV_to_10TeV_200perc.npy",\
                       "Helium_10TeV_to_100TeV_200perc.npy"]
 
-sample_sets = {"Proton": Proton_filelist, "Helium": Helium_filelist,\
-               "Proton_p15": Proton_p15_filelist, "Proton_all": Proton_all_filelist,\
+sample_sets = {"Proton": Proton_filelist, "Proton_p15": Proton_p15_filelist, "Proton_all": Proton_all_filelist,\
+               "Helium": Helium_filelist, "Helium_p12": Helium_p12_filelist, "Helium_all": Helium_all_filelist,\
                "Proton_old": Proton_old_filelist,\
                "ProtonFluka": ProtonFluka_filelist, "HeliumFluka": HeliumFluka_filelist,\
                "Lithium7": Lithium7_filelist, "Beryllium9": Beryllium9_filelist,\
                "Proton120": Proton120_filelist, "Proton80": Proton80_filelist,\
                "Helium120": Helium120_filelist, "Helium80": Helium80_filelist,\
                "Helium200": Helium200_filelist, "HeliumFullSky": HeliumFullSky_filelist,\
-               "Carbon": Carbon_filelist, "Oxygen": Oxygen_filelist,
-               'ProtonFluka_fluka': [['Fluka_Proton_fluka/'+x[0],] for x in ProtonFluka_filelist]} ############  TEMP DELETE AGAIN
-    
+               "Carbon": Carbon_filelist, "Oxygen": Oxygen_filelist}
 
 
