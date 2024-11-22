@@ -21,7 +21,7 @@ pwd = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 sr_to_deg2        = (180/np.pi)**2
 Sky_in_square_deg = 4*np.pi * sr_to_deg2
-Code_folder       = "/USERS/coppinp/Code/"
+Code_folder       = "/Users/pcoppin/Documents/Postdoc/Code/"
 mpl_style_file    = pwd + "matplotlib_style"
 
 
@@ -690,6 +690,7 @@ def PSD_weight_fit(loge, *p):
     return p[0] + p[1]*loge + p[2]*np.power(loge,2) + p[3]*np.power(loge,p[4])
 
 def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0):
+    from scipy.interpolate import BSpline
     # Smearing splines for MIP are for x and y
     if( trigger in ['MIP1','MIP2'] ):
         trigger = 'MIP'
@@ -697,8 +698,11 @@ def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0):
     # with open(f"{s_dir}/Skim_{trigger}_fit.pickle", "rb") as f:
     with open("{}/Skim_{}_fit.pickle".format(s_dir,trigger), "rb") as f:
         splines_SK = pickle.load(f)
-    data_popt, data_E, data_y, data_yerr = splines_SK[(sample,PSD_sublayer)][2]
-    data_func = lambda E_i: PSD_weight_fit(np.log10(E_i), *data_popt)
+    # data_popt, data_E, data_y, data_yerr = splines_SK[(sample,PSD_sublayer)][2]
+    # data_func = lambda E_i: PSD_weight_fit(np.log10(E_i), *data_popt)
+    tckp, data_E, data_y, data_yerr = splines_SK[(sample,PSD_sublayer)][2]
+    data_func = lambda E_i: BSpline(*tckp)(np.log10(E_i))
+
     res = data_func(E_BGO)
     w = E_BGO>data_E[-1]
     res[w] = data_func(data_E[-1])
@@ -786,8 +790,11 @@ def Reweight(MCs, rescaling_factor=1., samples=None, Pickle_dir=None):
                 d['weight'] = d['Original_weight']
                 d['MC_weights'] = d['Original_MC_weights']
             return None
+        sample_short = sample.replace('_p15','').replace('_p12','').replace('_all','')
         if( rescaling_factor=='Geant4_to_FLUKA' ):
-            Pickle_file = '{}_Geant4_to_FLUKA.pickle'.format(sample)
+            Pickle_file = '{}_Geant4_to_FLUKA.pickle'.format(sample_short)
+        elif( rescaling_factor=='Correct_to_measured' ):
+            Pickle_file = '{}_to_Measured.pickle'.format(sample_short)
         else:
             dummy = sample.replace('_p12','').replace('_p15','').replace('_TargetDiffraction','').replace('_FullDiffraction','')
             Pickle_file = '{}_PSD{:04d}_STK{:04d}_BGO{:04d}.pickle'.format(dummy,
@@ -848,7 +855,7 @@ def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, Only_regular=False):
         dd[sample]["PSD_charge_corr"] = np.zeros( (len(dd[sample]["PSD_charge"]),5), dtype=float)
         E = dd[sample]["E_total_BGO"]
         # No need to redo smearing for p15
-        sample_to_use = sample.replace('_p15','').replace('_old', '')
+        sample_to_use = sample.replace('_p15','').replace('_p12','').replace('_old', '')
 
         for i in range(5):
             if( Only_regular and i==4 ):
@@ -1160,6 +1167,7 @@ Oxygen_filelist = [["allO16-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0.npy",],\
                    ["allO16-v6r0p15_10TeV_100TeV-EPOSLHC_FTFP.npy",],\
                    ["allO16-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP.npy",]]
 
+
 HeliumFullSky_filelist = ["Helium_10GeV_10TeV_FullSky.npy"]
 Proton80_filelist = ["Proton_10GeV_10TeV_80perc.npy",\
                      "Proton_10TeV_100TeV_80perc.npy"]
@@ -1189,6 +1197,5 @@ sample_sets = {"Proton": Proton_filelist, "Proton_p15": Proton_p15_filelist, "Pr
                "Helium120": Helium120_filelist, "Helium80": Helium80_filelist,\
                "Helium200": Helium200_filelist, "HeliumFullSky": HeliumFullSky_filelist,\
                "Carbon": Carbon_filelist, "Oxygen": Oxygen_filelist}
-    
 
 
