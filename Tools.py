@@ -6,22 +6,14 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-### In a notebook
-#from pathlib import Path
-#pwd = Path().resolve()
-### In a python script
-#import os
-#pwd = os.path.dirname(os.path.realpath(__file__))
-### Then
-#Code_foler = str(pwd.parent)
-#sys.path.insert(0, Code_folder+"/Tools")
-#import Tools test
+# Add dir of this file to python path
 
 pwd = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 sr_to_deg2        = (180/np.pi)**2
 Sky_in_square_deg = 4*np.pi * sr_to_deg2
-Code_folder       = "/Users/pcoppin/Documents/Postdoc/Code/"
+#Code_folder       = "/Users/pcoppin/Documents/Postdoc/Code/"
+Code_folder       = "/USERS/coppinp/Code/"
 mpl_style_file    = pwd + "matplotlib_style"
 
 
@@ -988,29 +980,30 @@ def Combine_npy_dict(Filelist=[], keys=[],\
     keys = copy.deepcopy(keys)
     data = {}
     for key in filters:
-        if( key=="MLcontainmentBGO" ):
-            ToAdd = ['BGOInterceptY', 'BGOInterceptX','BGOSlopeX', 'BGOSlopeY']
-            for key_ToAdd in ToAdd:
-                keys.append( key_ToAdd )
-        elif( key=="MLcontainmentSTK" ):
-            ToAdd = ['STKInterceptY', 'STKInterceptX','STKSlopeX', 'STKSlopeY']
-            for key_ToAdd in ToAdd:
-                keys.append( key_ToAdd )
+        if( "MLcontainment" in key ):
+            subdet  = key.split('_')[0][-3:]
+            ML_conf = key.split('_')[1]
+            ToAdd = [x.format(subdet,ML_conf) for x in ['{}InterceptY_{}', '{}InterceptX_{}','{}SlopeX_{}', '{}SlopeY_{}']]
+            keys.extend( ToAdd )
         elif( key=='TrueContainment' ):
             keys.append( 'TrueContainment' )
         elif( key=='MIP_trigger' ):
             keys.append('MIP1_trigger')
             keys.append('MIP2_trigger')
-        elif( key=="NonZeroPSD" ):
-            keys.append( "PSD_charge_STKtrack" )
+        elif( key=="NonZeroPSD_default" ):
+            keys.append( "PSD_charge_STKtrack_default" )
+        elif( key=="NonZeroPSD_ions" ):
+            keys.append( "PSD_charge_STKtrack_ions" )
+        elif( 'PSD_charge_Xin_' in key ):
+            # 'PSD_charge_Xin_ion_STKtrack_ions' 'PSD_charge_Xin_pro_STKtrack_default'
+            conf_type = key.split('_')[3]
+            keys.append( 'sel_{}_STKtrack'.format(conf_type) )
         elif( key not in keys ):
             keys.append( key )
-    if( 'PSD_charge_Xin_pro_STKtrack' in keys ):
-        keys.append( 'sel_pro_STKtrack' )
+        
     keys = np.unique(keys)
 
     for files in Filelist:
-        #print(f)
         data_is = [np.load(npy_dir+f, allow_pickle=True, encoding="latin1").item() for f in files]
 
         # if( 'E_total_BGO_quench' in data_is[0] ):
@@ -1050,40 +1043,48 @@ def Combine_npy_dict(Filelist=[], keys=[],\
     # w = data['HE_trigger'] * data["Skimmed"]
     w = np.ones_like(data['E_p'], dtype=bool)
     for key in filters:
-        if( key=='MLcontainmentBGO' ):
+        if( 'MLcontainmentBGO' in key ):
+            ML_conf = key.split('_')[1]
+            addon = '_' + ML_conf
+            
             # BGO prediction fiducially contained in BGO
             BGO_TopZ, BGO_BottomZ = 46., 448.
             cut = 280
-            topX = data['BGOSlopeX'] * BGO_TopZ + data['BGOInterceptX']
-            topY = data['BGOSlopeY'] * BGO_TopZ + data['BGOInterceptY']
-            bottomX = data['BGOSlopeX'] * BGO_BottomZ + data['BGOInterceptX']
-            bottomY = data['BGOSlopeY'] * BGO_BottomZ + data['BGOInterceptY']
+            topX = data['BGOSlopeX'+addon] * BGO_TopZ + data['BGOInterceptX'+addon]
+            topY = data['BGOSlopeY'+addon] * BGO_TopZ + data['BGOInterceptY'+addon]
+            bottomX = data['BGOSlopeX'+addon] * BGO_BottomZ + data['BGOInterceptX'+addon]
+            bottomY = data['BGOSlopeY'+addon] * BGO_BottomZ + data['BGOInterceptY'+addon]
             ml_bgo_fid = (abs(topX)<cut) * (abs(topY)<cut) * (abs(bottomX)<cut) * (abs(bottomY)<cut)
             w = w * ml_bgo_fid
             # Additional requirement: Make sure STK track is trustworthy
             TopZ = -210.
             cutTop = 500.
-            topX = data['BGOSlopeX'] * TopZ + data['BGOInterceptX']
-            topY = data['BGOSlopeY'] * TopZ + data['BGOInterceptY']
+            topX = data['BGOSlopeX'+addon] * TopZ + data['BGOInterceptX'+addon]
+            topY = data['BGOSlopeY'+addon] * TopZ + data['BGOInterceptY'+addon]
             w = w * (abs(topX)<cutTop) * (abs(topY)<cutTop)
 
-        elif( key=='MLcontainmentSTK' ):
+        elif( 'MLcontainmentSTK' in key ):
+            ML_conf = key.split('_')[1]
+            addon = '_' + ML_conf
+            
             # STK prediction fiducially contained within PSD to BGO
             TopZ, BottomZ = -325, 448.
             cutTop, cutBottom = 440, 280
-            topX = data['STKSlopeX'] * TopZ + data['STKInterceptX']
-            topY = data['STKSlopeY'] * TopZ + data['STKInterceptY']
-            bottomX = data['STKSlopeX'] * BottomZ + data['STKInterceptX']
-            bottomY = data['STKSlopeY'] * BottomZ + data['STKInterceptY']
+            topX = data['STKSlopeX'+addon] * TopZ + data['STKInterceptX'+addon]
+            topY = data['STKSlopeY'+addon] * TopZ + data['STKInterceptY'+addon]
+            bottomX = data['STKSlopeX'+addon] * BottomZ + data['STKInterceptX'+addon]
+            bottomY = data['STKSlopeY'+addon] * BottomZ + data['STKInterceptY'+addon]
             ml_stk_fid = (abs(topX)<cutTop) * (abs(topY)<cutTop) * (abs(bottomX)<cutBottom) * (abs(bottomY)<cutBottom)
             TopZ = 44.
             cutTop = 280.
-            topX = data['STKSlopeX'] * TopZ + data['STKInterceptX']
-            topY = data['STKSlopeY'] * TopZ + data['STKInterceptY']
+            topX = data['STKSlopeX'+addon] * TopZ + data['STKInterceptX'+addon]
+            topY = data['STKSlopeY'+addon] * TopZ + data['STKInterceptY'+addon]
             ml_stk_fid = ml_stk_fid * (abs(topX)<cutTop) * (abs(topY)<cutTop)
             w = w * ml_stk_fid
-        elif( key=="NonZeroPSD" ):
-            w = w * np.sum(data['PSD_charge_STKtrack']>0.1, axis=1, dtype=bool)
+            
+        elif( "NonZeroPSD" in key ):
+            ML_conf = key.split('_')[1]
+            w = w * np.sum(data['PSD_charge_STKtrack_'+ML_conf]>0.1, axis=1, dtype=bool)   
         elif( key=='MIP_trigger' ):
             w = w * (data['MIP1_trigger']+data['MIP2_trigger'])
         else:
@@ -1096,9 +1097,11 @@ def Combine_npy_dict(Filelist=[], keys=[],\
             if( "E_primary_non_trig" in data ):
                 data['E_primary_non_trig'] = np.concatenate( [data['E_primary_non_trig'],data['E_p'][~w][::10]] )
         data[key] = data[key][w]
-
-    if( "PSD_charge_STKtrack" in data ):
-        data["PSD_charge_STKtrack"] = np.maximum( data['PSD_charge_STKtrack'], 0.0 )
+    
+    for ML_conf in ['default','ions']:
+        key_to_check = 'PSD_charge_STKtrack_{}'.format(ML_conf)
+        if( key_to_check in data ):
+            data[key_to_check] = np.maximum( data[key_to_check], 0.0 )
 
     return data
 
@@ -1158,14 +1161,21 @@ Lithium7_filelist = [["allLi7-v6r0p10_10GeV_100GeV_QGSP.npy",],\
 Beryllium9_filelist = [["allBe9-v6r0p10_10GeV_100GeV_QGSP.npy",],\
                        ["allBe9-v6r0p10_100GeV_1TeV_FTFP-p1.npy",],\
                        ["allBe9-v6r0p10_1TeV_10TeV-FTFP.npy",]]
-Carbon_filelist = [["allC12-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0.npy",],\
-                   ["allC12-v6r0p13-reco-v6r0p15_1TeV_10TeV-FTFP.npy",],\
-                   ["allC12-v6r0p15_10TeV_100TeV_FTFP-BGO-Quenching-p0.npy",],\
-                   ["allC12-v6r0p15_100TeV_500TeV_EPOSLHC_FTFP.npy",]]
-Oxygen_filelist = [["allO16-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0.npy",],\
-                   ["allO16-v6r0p15_1TeV_10TeV_FTFP-BGO-Quenching-p0.npy",],\
-                   ["allO16-v6r0p15_10TeV_100TeV-EPOSLHC_FTFP.npy",],\
-                   ["allO16-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP.npy",]]
+Carbon_filelist = [["allC12-v6r0p15_10GeV_100GeV-FTFP",],\
+                   ["allC12-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0",],\
+                   ["allC12-v6r0p15_1TeV_10TeV_FTFP-BGO-Quenching-p0",],\
+                   ["allC12-v6r0p15_10TeV_100TeV_FTFP-BGO-Quenching-p0",],\
+                   ['allC12-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP','allC12-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP-p1']]
+Oxygen_filelist = [["",],\
+                   ["",],\
+                   ["",],\
+                   ["",]]
+CarbonFluka_filelist = [['allC12-v6r0p15_10GeV_100GeV-FLUKA',],\
+                        ['allC12-v6r0p14-reco-v6r0p15_100GeV_1TeV-FLUKA',],\
+                        ['allC12-v6r0p14-reco-v6r0p15_1TeV_10TeV-FLUKA',],\
+                        ['allC12-v6r0p14-reco-v6r0p15_10TeV_100TeV-FLUKA','allC12-v6r0p14-reco-v6r0p15_10TeV_100TeV-FLUKA-p1'],\
+                        ['allC12-v6r0p14-reco-v6r0p15_100TeV_500TeV-FLUKA','allC12-v6r0p14-reco-v6r0p15_100TeV_500TeV-FLUKA-p1']]
+
 
 
 HeliumFullSky_filelist = ["Helium_10GeV_10TeV_FullSky.npy"]
@@ -1186,16 +1196,17 @@ Helium_TargetDiffraction_filelist = [["allHe4-v6r0p15_1GeV_1TeV_FTFP_Diffraction
                                      ["allHe4-v6r0p15_1TeV_100TeV_FTFP_DiffractionOn.npy",]]
 Proton_FullDiffraction_filelist = [["allProton-v6r0p15_1GeV_1TeV_FTFP_FullDiffractionOn.npy",],]
 
-sample_sets = {"Proton": Proton_filelist, "Proton_p15": Proton_p15_filelist, "Proton_all": Proton_all_filelist,\
-               "Helium": Helium_filelist, "Helium_p12": Helium_p12_filelist, "Helium_all": Helium_all_filelist,\
-               "Proton_old": Proton_old_filelist,\
-               "Proton_TargetDiffraction": Proton_TargetDiffraction_filelist, "Helium_TargetDiffraction": Helium_TargetDiffraction_filelist,\
-               "Proton_FullDiffraction": Proton_FullDiffraction_filelist,\
-               "ProtonFluka": ProtonFluka_filelist, "HeliumFluka": HeliumFluka_filelist,\
-               "Lithium7": Lithium7_filelist, "Beryllium9": Beryllium9_filelist,\
-               "Proton120": Proton120_filelist, "Proton80": Proton80_filelist,\
-               "Helium120": Helium120_filelist, "Helium80": Helium80_filelist,\
-               "Helium200": Helium200_filelist, "HeliumFullSky": HeliumFullSky_filelist,\
-               "Carbon": Carbon_filelist, "Oxygen": Oxygen_filelist}
+sample_sets = {'Proton': Proton_filelist, 'Proton_p15': Proton_p15_filelist, 'Proton_all': Proton_all_filelist,\
+               'Helium': Helium_filelist, 'Helium_p12': Helium_p12_filelist, 'Helium_all': Helium_all_filelist,\
+               'Proton_old': Proton_old_filelist,\
+               'Proton_TargetDiffraction': Proton_TargetDiffraction_filelist, 'Helium_TargetDiffraction': Helium_TargetDiffraction_filelist,\
+               'Proton_FullDiffraction': Proton_FullDiffraction_filelist,\
+               'ProtonFluka': ProtonFluka_filelist, 'HeliumFluka': HeliumFluka_filelist,\
+               'Lithium7': Lithium7_filelist, 'Beryllium9': Beryllium9_filelist,\
+               'Proton120': Proton120_filelist, 'Proton80': Proton80_filelist,\
+               'Helium120': Helium120_filelist, 'Helium80': Helium80_filelist,\
+               'Helium200': Helium200_filelist, 'HeliumFullSky': HeliumFullSky_filelist,\
+               'Carbon': Carbon_filelist, 'Oxygen': Oxygen_filelist,\
+               'CarbonFluka': CarbonFluka_filelist}
 
 
