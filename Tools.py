@@ -5,6 +5,7 @@ import pickle
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import os.path
 
 # Add dir of this file to python path
 
@@ -12,10 +13,14 @@ pwd = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 sr_to_deg2        = (180/np.pi)**2
 Sky_in_square_deg = 4*np.pi * sr_to_deg2
-#Code_folder       = "/Users/pcoppin/Documents/Postdoc/Code/"
-Code_folder       = "/USERS/coppinp/Code/"
 mpl_style_file    = pwd + "matplotlib_style"
 
+Code_folder = '/Users/pcoppin/Documents/Postdoc/Code/'
+if( not os.path.isdir(Code_folder) ):
+    # We are not on my computer, are we on atlas-machine?
+    Code_folder = "/USERS/coppinp/Code/"
+    if( not os.path.isdir(Code_folder) ):
+        raise Exception('Code folder not found')
 
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:pink', 'tab:grey', 'tab:red',\
           'tab:brown', 'tab:olive']
@@ -1000,6 +1005,8 @@ def Combine_npy_dict(Filelist=[], keys=[],\
             keys.append( 'sel_{}_STKtrack'.format(conf_type) )
         elif( key not in keys ):
             keys.append( key )
+    if( 'MIP_trigger' in keys ):
+        keys.extend( ['MIP1_trigger','MIP2_trigger'] )
         
     keys = np.unique(keys)
 
@@ -1031,6 +1038,8 @@ def Combine_npy_dict(Filelist=[], keys=[],\
                 keys = data_i.keys()
             # Put data in dictionary
             for key in keys:
+                if( (key=='MIP_trigger') and (key not in data_i) ):
+                    data_i[key] = data_i['MIP1_trigger'] * data_i['MIP2_trigger']
                 if( key not in data ):
                     data[key] = data_i[key]
                 else:
