@@ -17,10 +17,8 @@ mpl_style_file    = pwd + "matplotlib_style"
 
 Code_folder = '/Users/pcoppin/Documents/Postdoc/Code/'
 if( not os.path.isdir(Code_folder) ):
-    # We are not on my computer, are we on atlas-machine?
+    # We are not on my computer, assume we are on an atlas-machine
     Code_folder = "/USERS/coppinp/Code/"
-    if( not os.path.isdir(Code_folder) ):
-        raise Exception('Code folder not found')
 
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:pink', 'tab:grey', 'tab:red',\
           'tab:brown', 'tab:olive']
@@ -1175,16 +1173,21 @@ Carbon_filelist = [["allC12-v6r0p15_10GeV_100GeV-FTFP",],\
                    ["allC12-v6r0p15_1TeV_10TeV_FTFP-BGO-Quenching-p0",],\
                    ["allC12-v6r0p15_10TeV_100TeV_FTFP-BGO-Quenching-p0",],\
                    ['allC12-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP','allC12-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP-p1']]
-Oxygen_filelist = [["",],\
-                   ["",],\
-                   ["",],\
-                   ["",]]
+Oxygen_filelist = [["allO16-v6r0p15_10GeV_100GeV-FTFP","allO16-v6r0p15_10GeV_100GeV-FTFP-p1"],\
+                   ["allO16-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0",],\
+                   ["allO16-v6r0p15_1TeV_10TeV_FTFP-BGO-Quenching-p0",],\
+                   ["allO16-v6r0p15_10TeV_100TeV-EPOSLHC_FTFP","allO16-v6r0p10_10TeV_100TeV_FTFP_p2"],
+                   ["allO16-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP","allO16-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP-p1"]]
 CarbonFluka_filelist = [['allC12-v6r0p15_10GeV_100GeV-FLUKA',],\
                         ['allC12-v6r0p14-reco-v6r0p15_100GeV_1TeV-FLUKA',],\
                         ['allC12-v6r0p14-reco-v6r0p15_1TeV_10TeV-FLUKA',],\
                         ['allC12-v6r0p14-reco-v6r0p15_10TeV_100TeV-FLUKA','allC12-v6r0p14-reco-v6r0p15_10TeV_100TeV-FLUKA-p1'],\
                         ['allC12-v6r0p14-reco-v6r0p15_100TeV_500TeV-FLUKA','allC12-v6r0p14-reco-v6r0p15_100TeV_500TeV-FLUKA-p1']]
-
+OxygenFluka_filelist = [["allO16-v6r0p15_10GeV_100GeV-FLUKA",],\
+                        ["allO16-v6r0p14-reco-v6r0p15_100GeV_1TeV-FLUKA",],\
+                        ["allO16-v6r0p14-reco-v6r0p15_1TeV_10TeV-FLUKA",],\
+                        ["allO16-v6r0p14-reco-v6r0p15_10TeV_100TeV-FLUKA",],\
+                        ["allO16-v6r0p14-reco-v6r0p15_100TeV_500TeV-FLUKA",]]
 
 
 HeliumFullSky_filelist = ["Helium_10GeV_10TeV_FullSky.npy"]
