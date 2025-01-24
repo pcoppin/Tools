@@ -1172,7 +1172,7 @@ Carbon_filelist = [["allC12-v6r0p15_10GeV_100GeV-FTFP.npy",],\
                    ["allC12-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0.npy",],\
                    ["allC12-v6r0p15_1TeV_10TeV_FTFP-BGO-Quenching-p0.npy",],\
                    ["allC12-v6r0p15_10TeV_100TeV_FTFP-BGO-Quenching-p0.npy",],\
-                   ['allC12-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP','allC12-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP-p1.npy']]
+                   ['allC12-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP.npy','allC12-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP-p1.npy']]
 Oxygen_filelist = [["allO16-v6r0p15_10GeV_100GeV-FTFP.npy","allO16-v6r0p15_10GeV_100GeV-FTFP-p1.npy"],\
                    ["allO16-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0.npy",],\
                    ["allO16-v6r0p15_1TeV_10TeV_FTFP-BGO-Quenching-p0.npy",],\
