@@ -1168,26 +1168,26 @@ Lithium7_filelist = [["allLi7-v6r0p10_10GeV_100GeV_QGSP.npy",],\
 Beryllium9_filelist = [["allBe9-v6r0p10_10GeV_100GeV_QGSP.npy",],\
                        ["allBe9-v6r0p10_100GeV_1TeV_FTFP-p1.npy",],\
                        ["allBe9-v6r0p10_1TeV_10TeV-FTFP.npy",]]
-Carbon_filelist = [["allC12-v6r0p15_10GeV_100GeV-FTFP",],\
-                   ["allC12-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0",],\
-                   ["allC12-v6r0p15_1TeV_10TeV_FTFP-BGO-Quenching-p0",],\
+Carbon_filelist = [["allC12-v6r0p15_10GeV_100GeV-FTFP.npy",],\
+                   ["allC12-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0.npy",],\
+                   ["allC12-v6r0p15_1TeV_10TeV_FTFP-BGO-Quenching-p0.npy",],\
                    ["allC12-v6r0p15_10TeV_100TeV_FTFP-BGO-Quenching-p0",],\
-                   ['allC12-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP','allC12-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP-p1']]
-Oxygen_filelist = [["allO16-v6r0p15_10GeV_100GeV-FTFP","allO16-v6r0p15_10GeV_100GeV-FTFP-p1"],\
-                   ["allO16-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0",],\
-                   ["allO16-v6r0p15_1TeV_10TeV_FTFP-BGO-Quenching-p0",],\
-                   ["allO16-v6r0p15_10TeV_100TeV-EPOSLHC_FTFP","allO16-v6r0p10_10TeV_100TeV_FTFP_p2"],
-                   ["allO16-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP","allO16-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP-p1"]]
-CarbonFluka_filelist = [['allC12-v6r0p15_10GeV_100GeV-FLUKA',],\
-                        ['allC12-v6r0p14-reco-v6r0p15_100GeV_1TeV-FLUKA',],\
-                        ['allC12-v6r0p14-reco-v6r0p15_1TeV_10TeV-FLUKA',],\
-                        ['allC12-v6r0p14-reco-v6r0p15_10TeV_100TeV-FLUKA','allC12-v6r0p14-reco-v6r0p15_10TeV_100TeV-FLUKA-p1'],\
-                        ['allC12-v6r0p14-reco-v6r0p15_100TeV_500TeV-FLUKA','allC12-v6r0p14-reco-v6r0p15_100TeV_500TeV-FLUKA-p1']]
-OxygenFluka_filelist = [["allO16-v6r0p15_10GeV_100GeV-FLUKA",],\
-                        ["allO16-v6r0p14-reco-v6r0p15_100GeV_1TeV-FLUKA",],\
-                        ["allO16-v6r0p14-reco-v6r0p15_1TeV_10TeV-FLUKA",],\
-                        ["allO16-v6r0p14-reco-v6r0p15_10TeV_100TeV-FLUKA",],\
-                        ["allO16-v6r0p14-reco-v6r0p15_100TeV_500TeV-FLUKA",]]
+                   ['allC12-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP','allC12-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP-p1.npy']]
+Oxygen_filelist = [["allO16-v6r0p15_10GeV_100GeV-FTFP","allO16-v6r0p15_10GeV_100GeV-FTFP-p1.npy"],\
+                   ["allO16-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0.npy",],\
+                   ["allO16-v6r0p15_1TeV_10TeV_FTFP-BGO-Quenching-p0.npy",],\
+                   ["allO16-v6r0p15_10TeV_100TeV-EPOSLHC_FTFP","allO16-v6r0p10_10TeV_100TeV_FTFP_p2.npy"],
+                   ["allO16-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP","allO16-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP-p1.npy"]]
+CarbonFluka_filelist = [['allC12-v6r0p15_10GeV_100GeV-FLUKA.npy',],\
+                        ['allC12-v6r0p14-reco-v6r0p15_100GeV_1TeV-FLUKA.npy',],\
+                        ['allC12-v6r0p14-reco-v6r0p15_1TeV_10TeV-FLUKA.npy',],\
+                        ['allC12-v6r0p14-reco-v6r0p15_10TeV_100TeV-FLUKA.npy','allC12-v6r0p14-reco-v6r0p15_10TeV_100TeV-FLUKA-p1.npy'],\
+                        ['allC12-v6r0p14-reco-v6r0p15_100TeV_500TeV-FLUKA.npy','allC12-v6r0p14-reco-v6r0p15_100TeV_500TeV-FLUKA-p1.npy']]
+OxygenFluka_filelist = [["allO16-v6r0p15_10GeV_100GeV-FLUKA.npy",],\
+                        ["allO16-v6r0p14-reco-v6r0p15_100GeV_1TeV-FLUKA.npy",],\
+                        ["allO16-v6r0p14-reco-v6r0p15_1TeV_10TeV-FLUKA.npy",],\
+                        ["allO16-v6r0p14-reco-v6r0p15_10TeV_100TeV-FLUKA.npy",],\
+                        ["allO16-v6r0p14-reco-v6r0p15_100TeV_500TeV-FLUKA.npy",]]
 
 
 HeliumFullSky_filelist = ["Helium_10GeV_10TeV_FullSky.npy"]
