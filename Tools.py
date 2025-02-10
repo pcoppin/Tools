@@ -243,20 +243,23 @@ def Generate_uniform_points_on_sphere(N, ra_dec=False, degrees=False):
 def Moyal(x, *p):
     '''
     A good enough approximation to the Landau function
-    that allows to estimate the MPV and sigma of the peak
+    that allows to estimate the MPV and sigma of the peak.
+    This one, however, is not normalised. Moyal from scipy is!
     '''
     xt = (x - p[1]) / p[2]
     f = np.exp(-(xt + np.exp(-xt)) / 2)
     return p[0] * f / f.max()
 
-def Landau(x, mu, sigma):
-    dt = 0.01
-    t_max = 25
-    t = np.arange(1e-6, t_max, dt)
-    res = 1/(np.pi*sigma)*np.sum(np.exp(-t)*np.cos(t*(x-mu)/sigma+2*t/np.pi*np.log(t/sigma)))*dt
-    res *= int((x<(mu+20*sigma)) * (x>(mu-12*sigma)))
-    return res
-Landau = np.vectorize(Landau)
+# def Landau(x, mu, sigma):
+#     dt = 0.01
+#     t_max = 25
+#     t = np.arange(1e-6, t_max, dt)
+#     res = 1/(np.pi*sigma)*np.sum(np.exp(-t)*np.cos(t*(x-mu)/sigma+2*t/np.pi*np.log(t/sigma)))*dt
+#     res *= int((x<(mu+20*sigma)) * (x>(mu-12*sigma)))
+#     return res
+# Landau = np.vectorize(Landau)
+# from scipy.stats import landau
+# Landau = landau.pdf
 
 def Gauss(x, *p):
     xt = (x - p[0]) / p[1]
@@ -264,19 +267,21 @@ def Gauss(x, *p):
     return norm*np.exp(-0.5 * xt**2)
 
 def Langau(x, mu, sigma_landau, sigma_gauss):
+    from scipy.stats import landau
+    Landau = landau.pdf
+
     ratio = sigma_landau/sigma_gauss
     if( ratio>=20 ):
         return Landau(x, mu, sigma_landau)
     elif( ratio<=0.05 ):
         return Gauss(x, mu, sigma_gauss)
     sigma = np.sqrt(sigma_gauss**2+sigma_landau**2)
-    t_min = -10*sigma
-    t_max = 18*sigma
+    t_min = mu-10*sigma
+    t_max = mu+99*sigma
     dt = min(sigma_gauss,sigma_landau)/20
     t = np.arange(t_min, t_max, dt)
     
-    from landaupy import landau
-    y_landau = landau.pdf(t, mu, sigma_landau)
+    y_landau = Landau(t, mu, sigma_landau)
     xx, tt = np.meshgrid(x,t)
     diff = xx-tt
     y_gauss = Gauss(diff, 0, sigma_gauss)
@@ -836,6 +841,7 @@ def STK_selection(dd, primary='Proton', variance_mean=0.3, tight_cuts=False, low
     return res
 
 def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, Only_regular=False):
+    from scipy.interpolate import BSpline
     # Smearing splines for MIP are for x and y
     if( trigger in ['MIP1','MIP2'] ):
         trigger = 'MIP'
@@ -855,13 +861,18 @@ def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, Only_regular=False):
         for i in range(5):
             if( Only_regular and i==4 ):
                 continue
-            MC_center = PSD_charge_fit(np.log10(E),*splines_MC[(sample_to_use,i)][0][0])
-            MC_width = PSD_charge_fit(np.log10(E),*splines_MC[(sample_to_use,i)][1][0])
+            
+            # MC_center = PSD_charge_fit(np.log10(E),*splines_MC[(sample_to_use,i)][0][0])
+            # MC_width = PSD_charge_fit(np.log10(E),*splines_MC[(sample_to_use,i)][1][0])
+            MC_center = BSpline(*splines_MC[(sample_to_use,i)][0][0])(np.log10(E))
+            MC_width = BSpline(*splines_MC[(sample_to_use,i)][1][0])(np.log10(E))
+
             Skim_center = PSD_charge_fit(np.log10(E),*splines_SK[(sample_to_use.replace('Fluka',''),i)][0][0])
             Skim_width = PSD_charge_fit(np.log10(E),*splines_SK[(sample_to_use.replace('Fluka',''),i)][1][0])
-            q = dd[sample]["PSD_charge"][:,i] if i<4 else dd[sample]["PSD_charge_Xin_pro"]
+            q = dd[sample]["PSD_charge"][:,i] if i<4 else dd[sample]["PSD_charge_Xin_ion"]
             w = q>0.1
             dd[sample]["PSD_charge_corr"][w,i] = (q[w]-MC_center[w]) * Skim_width[w]/MC_width[w] + Skim_center[w]
+            # dd[sample]["PSD_charge_corr"][w,i] =  q[w] - MC_center[w]  + Skim_center[w]
 
     return None
 
@@ -1010,6 +1021,22 @@ def Combine_npy_dict(Filelist=[], keys=[],\
 
     for files in Filelist:
         data_is = [np.load(npy_dir+f, allow_pickle=True, encoding="latin1").item() for f in files]
+
+        ########################################################################################################################
+        # Quick and dirty fix. Rename variables for old n-tuples and use proton ML tracks when asking for ion ones
+        old_keys = ["PSD_charge_STKtrack","PSD_length_STKtrack", "BGO_energy_STKtrack", "BGO_length_STKtrack",\
+                    "PSD_charge_BGOtrack","PSD_length_BGOtrack", "BGO_energy_BGOtrack", "BGO_length_BGOtrack",\
+                    "VertexPrediction",'HitSignal','HitDistance', "ML_BGO_costheta", "ML_STK_costheta",\
+                    "BGOInterceptX", "BGOInterceptY", "STKInterceptX", "STKInterceptY", 'HitSignalCombined', \
+                    'HitSignalEtaThetaCorr',"STKSlopeX", "STKSlopeY", "BGOSlopeX", "BGOSlopeY"]
+        for old_key in old_keys:
+            for iss in range(len(data_is)):
+                if( old_key in data_is[iss] ):
+                    data_is[iss][old_key+'_default'] = data_is[iss].pop(old_key)
+                    data_is[iss][old_key+'_ions'] = data_is[iss][old_key+'_default']
+                if( 'PSD_charge_Xin_pro_STKtrack' in data_is[iss] ):
+                    data_is[iss]['PSD_charge_Xin_ion_STKtrack'] = data_is[iss]['PSD_charge_Xin_pro_STKtrack']
+        ########################################################################################################################
 
         # if( 'E_total_BGO_quench' in data_is[0] ):
         #     if( 'E_total_BGO_quench' not in keys ):
@@ -1168,11 +1195,20 @@ Lithium7_filelist = [["allLi7-v6r0p10_10GeV_100GeV_QGSP.npy",],\
 Beryllium9_filelist = [["allBe9-v6r0p10_10GeV_100GeV_QGSP.npy",],\
                        ["allBe9-v6r0p10_100GeV_1TeV_FTFP-p1.npy",],\
                        ["allBe9-v6r0p10_1TeV_10TeV-FTFP.npy",]]
+Boron_filelist = [['allB10-v6r0p15_10GeV_100GeV_FTFP-p1.npy',],\
+                  ['allB10-v6r0p15_100GeV_1TeV_FTFP-p1.npy',],\
+                  ['allB10-v6r0p15_1TeV_10TeV-FTFP-p1.npy',],\
+                  ['allB10-v6r0p15_10TeV_100TeV-EPOSLHC_FTFP.npy',],\
+                  ['allB10-v6r0p15_100TeV_500TeV_EPOSLHC_FTFP-p2.npy',]]
 Carbon_filelist = [["allC12-v6r0p15_10GeV_100GeV-FTFP.npy",],\
                    ["allC12-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0.npy",],\
                    ["allC12-v6r0p15_1TeV_10TeV_FTFP-BGO-Quenching-p0.npy",],\
                    ["allC12-v6r0p15_10TeV_100TeV_FTFP-BGO-Quenching-p0.npy",],\
                    ['allC12-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP.npy','allC12-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP-p1.npy']]
+Nitrogen_filelist = [['allN14-v6r0p15_100GeV_1TeV_FTFP-p2.npy',],\
+                     ['allN14-v6r0p10_1TeV_10TeV-FTFP.npy',],\
+                     ['allN14-v6r0p15_10TeV_100TeV-EPOSLHC_FTFP.npy',],\
+                     ['allN14-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP.npy',]]
 Oxygen_filelist = [["allO16-v6r0p15_10GeV_100GeV-FTFP.npy","allO16-v6r0p15_10GeV_100GeV-FTFP-p1.npy"],\
                    ["allO16-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0.npy",],\
                    ["allO16-v6r0p15_1TeV_10TeV_FTFP-BGO-Quenching-p0.npy",],\
@@ -1215,6 +1251,7 @@ sample_sets = {'Proton': Proton_filelist, 'Proton_p15': Proton_p15_filelist, 'Pr
                'Proton_FullDiffraction': Proton_FullDiffraction_filelist,\
                'ProtonFluka': ProtonFluka_filelist, 'HeliumFluka': HeliumFluka_filelist,\
                'Lithium7': Lithium7_filelist, 'Beryllium9': Beryllium9_filelist,\
+               'Boron': Boron_filelist, 'Nitrogen': Nitrogen_filelist,\
                'Proton120': Proton120_filelist, 'Proton80': Proton80_filelist,\
                'Helium120': Helium120_filelist, 'Helium80': Helium80_filelist,\
                'Helium200': Helium200_filelist, 'HeliumFullSky': HeliumFullSky_filelist,\
