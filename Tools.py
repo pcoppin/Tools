@@ -840,39 +840,30 @@ def STK_selection(dd, primary='Proton', variance_mean=0.3, tight_cuts=False, low
     # res *= (N_HitSignal>6)
     return res
 
-def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, Only_regular=False):
-    from scipy.interpolate import BSpline
-    # Smearing splines for MIP are for x and y
+def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples):
     if( trigger in ['MIP1','MIP2'] ):
         trigger = 'MIP'
     import pickle
     splines_dir = Code_folder + 'PSD_smearing/Smearing_parameterisations/'
-    with open(splines_dir+"MC_{}_fit.pickle".format(trigger), "rb") as f:
-        splines_MC = pickle.load(f)
-    with open(splines_dir+"Skim_{}_fit.pickle".format(trigger), "rb") as f:
-        splines_SK = pickle.load(f)
+    with open(splines_dir+"MC_{}_FitResultsMean.pickle".format(trigger), "rb") as f:
+        Fit_results_mean = pickle.load(f)
 
     for sample in MC_samples:
-        dd[sample]["PSD_charge_corr"] = np.zeros( (len(dd[sample]["PSD_charge"]),5), dtype=float)
+        dd[sample]["PSD_charge_corr"] = np.zeros( (len(dd[sample]["PSD_charge"]),4), dtype=float)
         E = dd[sample]["E_total_BGO"]
         # No need to redo smearing for p15
         sample_to_use = sample.replace('_p15','').replace('_p12','').replace('_old', '')
+        MPV, weight, scale, MPV_shift = Fit_results_mean[sample_to_use]
+        E_bins_center = Fit_results_mean['E_bins_center'][:len(MPV)]
+        
+        for i in range(4):
+            MPV_pe = np.interp(np.log10(E), np.log10(E_bins_center), MPV)
+            scale_pe = np.interp(np.log10(E), np.log10(E_bins_center), scale)
+            MPV_shift_pe = np.interp(np.log10(E), np.log10(E_bins_center), MPV_shift)
 
-        for i in range(5):
-            if( Only_regular and i==4 ):
-                continue
-            
-            # MC_center = PSD_charge_fit(np.log10(E),*splines_MC[(sample_to_use,i)][0][0])
-            # MC_width = PSD_charge_fit(np.log10(E),*splines_MC[(sample_to_use,i)][1][0])
-            MC_center = BSpline(*splines_MC[(sample_to_use,i)][0][0])(np.log10(E))
-            MC_width = BSpline(*splines_MC[(sample_to_use,i)][1][0])(np.log10(E))
-
-            Skim_center = PSD_charge_fit(np.log10(E),*splines_SK[(sample_to_use.replace('Fluka',''),i)][0][0])
-            Skim_width = PSD_charge_fit(np.log10(E),*splines_SK[(sample_to_use.replace('Fluka',''),i)][1][0])
-            q = dd[sample]["PSD_charge"][:,i] if i<4 else dd[sample]["PSD_charge_Xin_ion"]
+            q = dd[sample]["PSD_charge"][:,i]
             w = q>0.1
-            dd[sample]["PSD_charge_corr"][w,i] = (q[w]-MC_center[w]) * Skim_width[w]/MC_width[w] + Skim_center[w]
-            # dd[sample]["PSD_charge_corr"][w,i] =  q[w] - MC_center[w]  + Skim_center[w]
+            dd[sample]["PSD_charge_corr"][w,i] = (q[w]-MPV_pe[w])*scale_pe[w] + MPV_pe[w] + MPV_shift_pe[w]
 
     return None
 
@@ -1028,7 +1019,8 @@ def Combine_npy_dict(Filelist=[], keys=[],\
                     "PSD_charge_BGOtrack","PSD_length_BGOtrack", "BGO_energy_BGOtrack", "BGO_length_BGOtrack",\
                     "VertexPrediction",'HitSignal','HitDistance', "ML_BGO_costheta", "ML_STK_costheta",\
                     "BGOInterceptX", "BGOInterceptY", "STKInterceptX", "STKInterceptY", 'HitSignalCombined', \
-                    'HitSignalEtaThetaCorr',"STKSlopeX", "STKSlopeY", "BGOSlopeX", "BGOSlopeY"]
+                    'HitSignalEtaThetaCorr',"STKSlopeX", "STKSlopeY", "BGOSlopeX", "BGOSlopeY",\
+                    'Median_STK_charge_EtaThetaCorr']
         for old_key in old_keys:
             for iss in range(len(data_is)):
                 if( old_key in data_is[iss] ):
