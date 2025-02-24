@@ -694,19 +694,14 @@ def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0):
     # Smearing splines for MIP are for x and y
     if( trigger in ['MIP1','MIP2'] ):
         trigger = 'MIP'
-    s_dir = Code_folder + 'PSD_smearing/Smearing_parameterisations'
-    # with open(f"{s_dir}/Skim_{trigger}_fit.pickle", "rb") as f:
-    with open("{}/Skim_{}_fit.pickle".format(s_dir,trigger), "rb") as f:
-        splines_SK = pickle.load(f)
-    # data_popt, data_E, data_y, data_yerr = splines_SK[(sample,PSD_sublayer)][2]
-    # data_func = lambda E_i: PSD_weight_fit(np.log10(E_i), *data_popt)
-    tckp, data_E, data_y, data_yerr = splines_SK[(sample,PSD_sublayer)][2]
-    data_func = lambda E_i: BSpline(*tckp)(np.log10(E_i))
+    s_dir = Code_folder + 'PSD_smearing/Smearing_parameterisations/'
+    with open(s_dir+"MC_{}_FitResultsMean.pickle".format(trigger), "rb") as f:
+        Fit_results_mean = pickle.load(f)
+    sample_to_use = sample.replace('_p15','').replace('_p12','').replace('_old', '')
+    MPV, weight, scale, MPV_shift = Fit_results_mean[sample_to_use]
+    E_bins_center = Fit_results_mean['E_bins_center'][:len(MPV)]
 
-    res = data_func(E_BGO)
-    w = E_BGO>data_E[-1]
-    res[w] = data_func(data_E[-1])
-    return np.maximum(res,0)
+    return np.interp(np.log(E_BGO), np.log(E_bins_center), weight)
 
 def Helium_to_ProtonPlusHelium(E_BGO):
     return 1 - Proton_to_ProtonPlusHelium(E_BGO)
