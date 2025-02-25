@@ -689,19 +689,24 @@ def PSD_charge_fit(loge, *p):
 def PSD_weight_fit(loge, *p):
     return p[0] + p[1]*loge + p[2]*np.power(loge,2) + p[3]*np.power(loge,p[4])
 
-def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0):
+def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0, vertex=0.5):
     from scipy.interpolate import BSpline
     # Smearing splines for MIP are for x and y
+    sample_to_use = sample.replace('_p15','').replace('_p12','').replace('_old', '')
     if( trigger in ['MIP1','MIP2'] ):
         trigger = 'MIP'
     s_dir = Code_folder + 'PSD_smearing/Smearing_parameterisations/'
-    with open(s_dir+"MC_{}_FitResultsMean.pickle".format(trigger), "rb") as f:
-        Fit_results_mean = pickle.load(f)
-    sample_to_use = sample.replace('_p15','').replace('_p12','').replace('_old', '')
-    MPV, weight, scale, MPV_shift = Fit_results_mean[sample_to_use]
-    E_bins_center = Fit_results_mean['E_bins_center'][:len(MPV)]
-
-    return np.interp(np.log(E_BGO), np.log(E_bins_center), weight)
+    if( PSD_sublayer==-1 ):
+        with open(s_dir+"MC_{}_Vertex_{}_FitResultsMean.pickle".format(trigger,vertex), "rb") as f:
+            Fit_results_mean = pickle.load(f)
+        MPV, weight, scale, MPV_shift = Fit_results_mean[sample_to_use]
+        E_bins_center = Fit_results_mean['E_bins_center'][:len(MPV)]
+    else:
+        with open(s_dir+"MC_{}_Vertex_{}_FitResults.pickle".format(trigger,vertex), "rb") as f:
+            Fit_results = pickle.load(f)
+        MPV, weight, scale, MPV_shift = list(zip(*Fit_results[(sample_to_use,PSD_sublayer)]))
+        E_bins_center = Fit_results['E_bins_center'][:len(MPV)]
+    return np.interp(np.log(E_BGO), np.log(E_bins_center[:-2]), weight[:-2])
 
 def Helium_to_ProtonPlusHelium(E_BGO):
     return 1 - Proton_to_ProtonPlusHelium(E_BGO)
