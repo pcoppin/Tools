@@ -840,12 +840,12 @@ def STK_selection(dd, primary='Proton', variance_mean=0.3, tight_cuts=False, low
     # res *= (N_HitSignal>6)
     return res
 
-def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples):
+def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, vertex=0.5):
     if( trigger in ['MIP1','MIP2'] ):
         trigger = 'MIP'
     import pickle
     splines_dir = Code_folder + 'PSD_smearing/Smearing_parameterisations/'
-    with open(splines_dir+"MC_{}_FitResultsMean.pickle".format(trigger), "rb") as f:
+    with open(splines_dir+"MC_{}_Vertex_{}_FitResultsMean.pickle".format(trigger,vertex), "rb") as f:
         Fit_results_mean = pickle.load(f)
 
     for sample in MC_samples:
@@ -888,8 +888,14 @@ def PSD_selection(dd, trigger, sample, sigma_left=-5, sigma_right=3):
 
 def PSD_selection_proton_paper(dd, PSD_charge='Xin'):
     E = dd['E_total_BGO']
+    # left = 0.6 + 0.05 * np.log10(E/10)
+    # right = 1.8 + 0.002 * np.power(np.log10(E/10),4)
+
+
     left = 0.6 + 0.05 * np.log10(E/10)
-    right = 1.8 + 0.002 * np.power(np.log10(E/10),4)
+    right = 1.6 + 0.005 * np.power(np.log10(E/10),4)
+
+
     if( PSD_charge=='Xin' ):
         q = dd['PSD_charge_corr'][:,4] if 'E_p' in dd else dd['PSD_charge_Xin_pro']
         return (left<q) * (q<right) * dd['sel_pro_STKtrack']
@@ -1206,11 +1212,21 @@ Oxygen_filelist = [["allO16-v6r0p15_10GeV_100GeV-FTFP.npy","allO16-v6r0p15_10GeV
                    ["allO16-v6r0p15_1TeV_10TeV_FTFP-BGO-Quenching-p0.npy",],\
                    ["allO16-v6r0p15_10TeV_100TeV-EPOSLHC_FTFP.npy","allO16-v6r0p10_10TeV_100TeV_FTFP_p2.npy"],
                    ["allO16-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP.npy","allO16-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP-p1.npy"]]
+BoronFluka_filelist = [["allB10-v6r0p15_10GeV_100GeV_FTFP-p1.npy",],\
+                       ["allB10-v6r0p15_100GeV_1TeV_FTFP-p1.npy",],\
+                       ["allB10-v6r0p15_1TeV_10TeV-FTFP-p1.npy",],\
+                       ["allB10-v6r0p15_10TeV_100TeV-EPOSLHC_FTFP.npy",],\
+                       ["allB10-v6r0p15_100TeV_500TeV_EPOSLHC_FTFP-p2.npy",]]
 CarbonFluka_filelist = [['allC12-v6r0p15_10GeV_100GeV-FLUKA.npy',],\
                         ['allC12-v6r0p14-reco-v6r0p15_100GeV_1TeV-FLUKA.npy',],\
                         ['allC12-v6r0p14-reco-v6r0p15_1TeV_10TeV-FLUKA.npy',],\
                         ['allC12-v6r0p14-reco-v6r0p15_10TeV_100TeV-FLUKA.npy','allC12-v6r0p14-reco-v6r0p15_10TeV_100TeV-FLUKA-p1.npy'],\
                         ['allC12-v6r0p14-reco-v6r0p15_100TeV_500TeV-FLUKA.npy','allC12-v6r0p14-reco-v6r0p15_100TeV_500TeV-FLUKA-p1.npy']]
+NitrogenFluka_filelist = [["allN14-v6r0p15_10GeV_100GeV-FLUKA.npy",],\
+                          ["allN14-v6r0p15_100GeV_1TeV-FLUKA.npy",],\
+                          ["allN14-v6r0p15_1TeV_10TeV-FLUKA.npy",],\
+                          ["allN14-v6r0p15_10TeV_100TeV-FLUKA.npy",],\
+                          ["allN14-v6r0p15_100TeV_500TeV-FLUKA.npy",]]
 OxygenFluka_filelist = [["allO16-v6r0p15_10GeV_100GeV-FLUKA.npy",],\
                         ["allO16-v6r0p14-reco-v6r0p15_100GeV_1TeV-FLUKA.npy",],\
                         ["allO16-v6r0p14-reco-v6r0p15_1TeV_10TeV-FLUKA.npy",],\
@@ -1248,6 +1264,7 @@ sample_sets = {'Proton': Proton_filelist, 'Proton_p15': Proton_p15_filelist, 'Pr
                'Helium120': Helium120_filelist, 'Helium80': Helium80_filelist,\
                'Helium200': Helium200_filelist, 'HeliumFullSky': HeliumFullSky_filelist,\
                'Carbon': Carbon_filelist, 'Oxygen': Oxygen_filelist,\
-               'CarbonFluka': CarbonFluka_filelist}
+               'CarbonFluka': CarbonFluka_filelist, 'OxygenFluka': OxygenFluka_filelist,\
+               'BoronFluka': BoronFluka_filelist, 'NitrogenFluka': NitrogenFluka_filelist}
 
 
