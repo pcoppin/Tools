@@ -1053,6 +1053,10 @@ def Combine_npy_dict(Filelist=[], keys=[],\
                 data_i['weight'] *= 2
             elif( "100TeV_500TeV" in files[0] ):
                 data_i['weight'] *= np.log10(5)
+            elif(  "500TeV_1PeV" in files[0] ):
+                data_i['weight'] *= np.log10(2)
+            elif( "1PeV_3PeV" in files[0] ):
+                data_i['weight'] *= np.log10(3)
             else:
                 # Don't do anything. Default scaling assuming samples that span factor 10 in energy
                 pass
@@ -1202,7 +1206,9 @@ Carbon_filelist = [["allC12-v6r0p15_10GeV_100GeV-FTFP.npy",],\
                    ["allC12-v6r0p15_100GeV_1TeV_FTFP-BGO-Quenching-p0.npy",],\
                    ["allC12-v6r0p15_1TeV_10TeV_FTFP-BGO-Quenching-p0.npy",],\
                    ["allC12-v6r0p15_10TeV_100TeV_FTFP-BGO-Quenching-p0.npy",],\
-                   ['allC12-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP.npy','allC12-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP-p1.npy']]
+                   ['allC12-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP.npy','allC12-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP-p1.npy'],\
+                   ['allC12-v6r0p13-reco-v6r0p15_500TeV_1PeV-EPOSLHC_FTFP.npy',],\
+                   ['allC12-v6r0p15_1PeV_3PeV-EPOSLHC_FTFP']]
 Nitrogen_filelist = [['allN14-v6r0p15_100GeV_1TeV_FTFP-p2.npy',],\
                      ['allN14-v6r0p10_1TeV_10TeV-FTFP.npy',],\
                      ['allN14-v6r0p15_10TeV_100TeV-EPOSLHC_FTFP.npy',],\
