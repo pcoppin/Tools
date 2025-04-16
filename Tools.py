@@ -933,7 +933,17 @@ def PSD_selection_helium_paper(dd, PSD_charge='Xin'):
         raise Exception('Type of charge: {} unknown'.format(PSD_charge))
         return 0
 
+def Left_lim_carbon(E):
+    left = 5.6 * np.ones(len(E))
+    w_high_E = E > 1e4
+    left[w_high_E] += 0.1*(np.log10(E[w_high_E])-4)
+    return left
 
+def Right_lim_carbon(E):
+    right = 6.5+0.05*np.log10(E)
+    w_high_E = np.log10(E) > 3.5
+    right[w_high_E] += 0.6*(np.log10(E[w_high_E])-3.5)
+    return right
 
 def G4_frac_quasielastic(E):
     ### These values are derived from the Hadr03 examples
