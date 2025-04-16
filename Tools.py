@@ -996,8 +996,6 @@ def Combine_npy_dict(Filelist=[], keys=[],\
             ML_conf = key.split('_')[1]
             ToAdd = [x.format(subdet,ML_conf) for x in ['{}InterceptY_{}', '{}InterceptX_{}','{}SlopeX_{}', '{}SlopeY_{}']]
             keys.extend( ToAdd )
-        elif( key=='TrueContainment' ):
-            keys.append( 'TrueContainment' )
         elif( key=='MIP_trigger' ):
             keys.append('MIP1_trigger')
             keys.append('MIP2_trigger')
