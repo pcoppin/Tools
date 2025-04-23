@@ -782,7 +782,7 @@ def Reweight(MCs, rescaling_factor=1., samples=None, Pickle_dir=None):
     if samples is None:
         samples = MCs.keys()
     if( Pickle_dir is None ):
-        Pickle_dir = Code_folder + 'z_classifier/Reweighting/WeightingPickles/'
+        Pickle_dir = Code_folder + 'z_classifier_PROTON_HELIUM/Reweighting/WeightingPickles/'
     for sample in samples:
         d = MCs[sample]
         if( rescaling_factor==1 ):
