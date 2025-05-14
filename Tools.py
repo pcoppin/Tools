@@ -809,6 +809,13 @@ def Reweight(MCs, rescaling_factor=1., samples=None, Pickle_dir=None):
         y = d['pv_cos_theta']
         z = d['stop_z']
         scaling_factor = interpolator(np.dstack((x,y,z)))[0]
+
+        if( np.any(np.isnan(scaling_factor)) ):
+            raise Exception('NAN in scaling factors! Investigate interpolator and check e.g. validity energy range.')
+        if( np.mean(scaling_factor<0)>0.01 ):
+            raise Exception('More than 1% of events have negative weights. Investigate interpolator!')
+
+        scaling_factor = np.maximum(scaling_factor, 0)
         d['scaling_factor'] = scaling_factor
         if 'Original_MC_weights' not in d:
             d['Original_weight'] = deepcopy(d['weight'])
@@ -1034,7 +1041,7 @@ def Combine_npy_dict(Filelist=[], keys=[],\
                     "VertexPrediction",'HitSignal','HitDistance', "ML_BGO_costheta", "ML_STK_costheta",\
                     "BGOInterceptX", "BGOInterceptY", "STKInterceptX", "STKInterceptY", 'HitSignalCombined', \
                     'HitSignalEtaThetaCorr',"STKSlopeX", "STKSlopeY", "BGOSlopeX", "BGOSlopeY",\
-                    'Median_STK_charge_EtaThetaCorr']
+                    'Median_STK_charge_EtaThetaCorr', 'VertexPrediction_REG_BGO']
         for old_key in old_keys:
             for iss in range(len(data_is)):
                 if( old_key in data_is[iss] ):
