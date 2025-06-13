@@ -692,7 +692,7 @@ def PSD_weight_fit(loge, *p):
 def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0, vertex=0.5):
     from scipy.interpolate import BSpline
     # Smearing splines for MIP are for x and y
-    sample_to_use = sample.replace('_p15','').replace('_p12','').replace('_old', '')
+    sample_to_use = sample.replace('_p15','').replace('_p12','').replace('_old', '').replace('_all','')
     if( trigger in ['MIP1','MIP2'] ):
         trigger = 'MIP'
     s_dir = Code_folder + 'PSD_smearing/Smearing_parameterisations/'
@@ -852,14 +852,17 @@ def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, vertex=0.5):
         trigger = 'MIP'
     import pickle
     splines_dir = Code_folder + 'PSD_smearing/Smearing_parameterisations/'
-    with open(splines_dir+"MC_{}_Vertex_{}_FitResultsMean.pickle".format(trigger,vertex), "rb") as f:
+    MC_type = 'MCFLUKA' if('Fluka' in list(MC_samples)[0]) else 'MC'
+    source_file = splines_dir+"{}_{}_Vertex_{}_FitResultsMean.pickle".format(MC_type,trigger,vertex)
+    print('Reading:', source_file)
+    with open(source_file, "rb") as f:
         Fit_results_mean = pickle.load(f)
 
     for sample in MC_samples:
         dd[sample]["PSD_charge_corr"] = np.zeros( (len(dd[sample]["PSD_charge"]),4), dtype=float)
         E = dd[sample]["E_total_BGO"]
         # No need to redo smearing for p15
-        sample_to_use = sample.replace('_p15','').replace('_p12','').replace('_old', '')
+        sample_to_use = sample.replace('_p15','').replace('_p12','').replace('_old', '').replace('_all','')
         MPV, weight, scale, MPV_shift = Fit_results_mean[sample_to_use]
         E_bins_center = Fit_results_mean['E_bins_center'][:len(MPV)]
         
