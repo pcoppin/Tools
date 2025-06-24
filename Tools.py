@@ -586,9 +586,12 @@ class Hist(object):
         else:
             self.log = False
 
-    def Add_counts(self, idx, counts):
-        self.hist[idx] = self.hist[idx] + counts
-        self.set_vars()
+    def Add_counts(self, counts, idx=None):
+        if( idx is None ):
+            self.hist += counts
+        else:
+            self.hist[idx] = self.hist[idx] + counts
+            self.set_vars()
 
     def Add_values(self, values):
         new_hist, new_bin_edges = np.histogram(values, bins=self.bins)
@@ -690,23 +693,24 @@ def PSD_weight_fit(loge, *p):
     return p[0] + p[1]*loge + p[2]*np.power(loge,2) + p[3]*np.power(loge,p[4])
 
 def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0, vertex=0.5):
-    from scipy.interpolate import BSpline
     # Smearing splines for MIP are for x and y
     sample_to_use = sample.replace('_p15','').replace('_p12','').replace('_old', '').replace('_all','')
     if( trigger in ['MIP1','MIP2'] ):
         trigger = 'MIP'
     s_dir = Code_folder + 'PSD_smearing/Smearing_parameterisations/'
+    MCtype = 'MCFLUKA' if( 'Fluka' in sample ) else 'MC'
     if( PSD_sublayer==-1 ):
-        with open(s_dir+"MC_{}_Vertex_{}_FitResultsMean.pickle".format(trigger,vertex), "rb") as f:
+        with open(s_dir+"{}_{}_Vertex_{}_FitResultsMean.pickle".format(MCtype,trigger,vertex), "rb") as f:
             Fit_results_mean = pickle.load(f)
         MPV, weight, scale, MPV_shift = Fit_results_mean[sample_to_use]
-        E_bins_center = Fit_results_mean['E_bins_center'][:len(MPV)]
+        E_bins_center = Fit_results_mean['E_bins_center']
     else:
-        with open(s_dir+"MC_{}_Vertex_{}_FitResults.pickle".format(trigger,vertex), "rb") as f:
+        with open(s_dir+"{}_{}_Vertex_{}_FitResults.pickle".format(MCtype,trigger,vertex), "rb") as f:
             Fit_results = pickle.load(f)
         MPV, weight, scale, MPV_shift = list(zip(*Fit_results[(sample_to_use,PSD_sublayer)]))
-        E_bins_center = Fit_results['E_bins_center'][:len(MPV)]
-    return np.interp(np.log(E_BGO), np.log(E_bins_center[:-2]), weight[:-2])
+        E_bins_center = Fit_results['E_bins_center']
+    cutoff = -2 if( trigger=='MIP' ) else None
+    return np.interp(np.log(E_BGO), np.log(E_bins_center[:cutoff]), weight[:cutoff])
 
 def Helium_to_ProtonPlusHelium(E_BGO):
     return 1 - Proton_to_ProtonPlusHelium(E_BGO)
@@ -937,7 +941,7 @@ def PSD_selection_helium_paper(dd, PSD_charge='Xin'):
     elif( PSD_charge=='Mine_xy' ):
         w_x = (left<dd['charge_x']) * (dd['charge_x']<right)
         w_y = (left<dd['charge_y']) * (dd['charge_y']<right)
-        ratio = dd['charge_x']/dd['charge_y']
+        ratio = dd['charge_x']/np.maximum(dd['charge_y'],1e-9)
         return w_x * w_y * (ratio>0.5) * (ratio<2)
     else:
         raise Exception('Type of charge: {} unknown'.format(PSD_charge))
@@ -1049,6 +1053,8 @@ def Combine_npy_dict(Filelist=[], keys=[],\
             for iss in range(len(data_is)):
                 if( old_key in data_is[iss] ):
                     data_is[iss][old_key+'_default'] = data_is[iss].pop(old_key)
+                    data_is[iss][old_key+'_ions'] = data_is[iss][old_key+'_default']
+                if( (old_key+'_default' in data_is[iss]) and (old_key+'_ions' not in data_is[iss]) ):
                     data_is[iss][old_key+'_ions'] = data_is[iss][old_key+'_default']
                 if( 'PSD_charge_Xin_pro_STKtrack' in data_is[iss] ):
                     data_is[iss]['PSD_charge_Xin_ion_STKtrack'] = data_is[iss]['PSD_charge_Xin_pro_STKtrack']
@@ -1196,7 +1202,8 @@ Helium_p12_filelist = [['allHe4-v6r0p15_1GeV_10GeV_FTFP.npy',],
                        ["allHe4-v6r0p12_100GeV_1TeV-FTFP_BGO_Quenching.npy",],\
                        ["allHe4-v6r0p12_1TeV_10TeV-FTFP-BGO_Quenching.npy",],\
                        ["allHe4-v6r0p12_10TeV_100TeV-FTFP_BGO_Quenching.npy",],\
-                       ["allHe4-v6r0p12_100TeV_500TeV-EPOSLHC_reg-p1-p2.npy",]]
+                       ["allHe4-v6r0p12_100TeV_500TeV-EPOSLHC_reg-p1-p2.npy",],\
+                       ["allHe4-v6r0p15_500TeV_1PeV-EPOSLHC_FTFP.npy","allHe4-v6r0p15_500TeV_1PeV_EPOSLHC_BERT-p1.npy"]]
 Helium_all_filelist = [['allHe4-v6r0p15_1GeV_10GeV_FTFP.npy',],
                        ["allHe4-v6r0p10_10GeV_100GeV_FTFP.npy","allHe4-v6r0p12_10GeV_100GeV-FTFP_BGO_Quenching.npy"],\
                        ["allHe4-v6r0p10_100GeV_1TeV_FTFP.npy","allHe4-v6r0p12_100GeV_1TeV-FTFP_BGO_Quenching.npy"],\
