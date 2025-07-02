@@ -543,7 +543,7 @@ def Central_energy(E1, E2, g=-2.65):
     return np.power(num/den, 1./g)
 
 def Rigidity_to_kinetic_energy(rigidity, charge=1, mass=0.931):
-    return np.sqrt(np.power(charge,2)*np.power(rigidity,2)+mass**2) - mass
+    return np.sqrt(np.power(charge*rigidity,2)+mass**2) - mass
 
 def Kinetic_energy_to_rigidity(Ekin, charge=1, mass=0.931):
     return np.sqrt(np.power(Ekin+mass,2)-mass**2)/charge
@@ -1216,12 +1216,16 @@ HeliumFluka_filelist = [["allHe4-v6r0p15_1GeV_10GeV_FLUKA.npy",],\
                         ["allHe4-v6r0p10_1TeV_10TeV-FLUKA.npy",],\
                         ["allHe4-v6r0p10_10TeV_100TeV-FLUKA-p1.npy",],\
                         ["allHe4-v6r0p10_100TeV_500TeV-FLUKA.npy",]]
-Lithium7_filelist = [["allLi7-v6r0p10_10GeV_100GeV_QGSP.npy",],\
-                     ["allLi7-v6r0p10_100GeV_1TeV_QGSP.npy",],\
-                     ["allLi7-v6r0p10_1TeV_10TeV-FTFP.npy",]]
-Beryllium9_filelist = [["allBe9-v6r0p10_10GeV_100GeV_QGSP.npy",],\
+Lithium7_filelist = [["allLi7-v6r0p10_10GeV_100GeV_FTFP-p1.npy",],\
+                     ["allLi7-v6r0p10_100GeV_1TeV_FTFP-p1.npy",],\
+                     ["allLi7-v6r0p15_1TeV_10TeV_FTFP-p0.npy",],\
+                     ["allLi7-v6r0p10_10TeV_100TeV-FTFP.npy","allLi7-v6r0p15_10TeV_100TeV-EPOSLHC_FTFP.npy"],\
+                     ["allLi7-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP.npy",]]
+Beryllium9_filelist = [["allBe9-v6r0p10_10GeV_100GeV_FTFP-p1.npy",],\
                        ["allBe9-v6r0p10_100GeV_1TeV_FTFP-p1.npy",],\
-                       ["allBe9-v6r0p10_1TeV_10TeV-FTFP.npy",]]
+                       ["allBe9-v6r0p10_1TeV_10TeV-FTFP.npy",],\
+                       ["allBe9-v6r0p15_10TeV_100TeV-EPOSLHC_FTFP.npy",],\
+                       ["allBe9-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP.npy",]]
 Boron_filelist = [['allB10-v6r0p15_10GeV_100GeV_FTFP-p1.npy',],\
                   ['allB10-v6r0p15_100GeV_1TeV_FTFP-p1.npy',],\
                   ['allB10-v6r0p15_1TeV_10TeV-FTFP-p1.npy',],\
