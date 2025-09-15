@@ -1040,26 +1040,24 @@ def Combine_npy_dict(Filelist=[], keys=[],\
 
     for files in Filelist:
         data_is = [np.load(npy_dir+f, allow_pickle=True, encoding="latin1").item() for f in files]
-
         ########################################################################################################################
         # Quick and dirty fix. Rename variables for old n-tuples and use proton ML tracks when asking for ion ones
-        old_keys = ["PSD_charge_STKtrack","PSD_length_STKtrack", "BGO_energy_STKtrack", "BGO_length_STKtrack",\
-                    "PSD_charge_BGOtrack","PSD_length_BGOtrack", "BGO_energy_BGOtrack", "BGO_length_BGOtrack",\
-                    "VertexPrediction",'HitSignal','HitDistance', "ML_BGO_costheta", "ML_STK_costheta",\
-                    "BGOInterceptX", "BGOInterceptY", "STKInterceptX", "STKInterceptY", 'HitSignalCombined', \
-                    'HitSignalEtaThetaCorr',"STKSlopeX", "STKSlopeY", "BGOSlopeX", "BGOSlopeY",\
-                    'Median_STK_charge_EtaThetaCorr', 'VertexPrediction_REG_BGO']
-        for old_key in old_keys:
-            for iss in range(len(data_is)):
-                if( old_key in data_is[iss] ):
-                    data_is[iss][old_key+'_default'] = data_is[iss].pop(old_key)
-                    data_is[iss][old_key+'_ions'] = data_is[iss][old_key+'_default']
-                if( (old_key+'_default' in data_is[iss]) and (old_key+'_ions' not in data_is[iss]) ):
-                    data_is[iss][old_key+'_ions'] = data_is[iss][old_key+'_default']
-                if( 'PSD_charge_Xin_pro_STKtrack' in data_is[iss] ):
-                    data_is[iss]['PSD_charge_Xin_ion_STKtrack'] = data_is[iss]['PSD_charge_Xin_pro_STKtrack']
+        # old_keys = ["PSD_charge_STKtrack","PSD_length_STKtrack", "BGO_energy_STKtrack", "BGO_length_STKtrack",\
+        #             "PSD_charge_BGOtrack","PSD_length_BGOtrack", "BGO_energy_BGOtrack", "BGO_length_BGOtrack",\
+        #             "VertexPrediction",'HitSignal','HitDistance', "ML_BGO_costheta", "ML_STK_costheta",\
+        #             "BGOInterceptX", "BGOInterceptY", "STKInterceptX", "STKInterceptY", 'HitSignalCombined', \
+        #             'HitSignalEtaThetaCorr',"STKSlopeX", "STKSlopeY", "BGOSlopeX", "BGOSlopeY",\
+        #             'Median_STK_charge_EtaThetaCorr', 'VertexPrediction_REG_BGO']
+        # for old_key in old_keys:
+        #     for iss in range(len(data_is)):
+        #         if( old_key in data_is[iss] ):
+        #             data_is[iss][old_key+'_default'] = data_is[iss].pop(old_key)
+        #             data_is[iss][old_key+'_ions'] = data_is[iss][old_key+'_default']
+        #         if( (old_key+'_default' in data_is[iss]) and (old_key+'_ions' not in data_is[iss]) ):
+        #             data_is[iss][old_key+'_ions'] = data_is[iss][old_key+'_default']
+        #         if( 'PSD_charge_Xin_pro_STKtrack' in data_is[iss] ):
+        #             data_is[iss]['PSD_charge_Xin_ion_STKtrack'] = data_is[iss]['PSD_charge_Xin_pro_STKtrack']
         ########################################################################################################################
-
         # if( 'E_total_BGO_quench' in data_is[0] ):
         #     if( 'E_total_BGO_quench' not in keys ):
         #         keys = list(keys)
