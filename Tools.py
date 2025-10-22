@@ -569,6 +569,15 @@ class Hist(object):
             self.hist, self.bins = np.array(data), np.array(kw["bins"])
         else:
             self.hist, self.bins = np.histogram(data, **kw)
+            if( 'weights' in kw ):
+                import copy
+                kw_copy = copy.deepcopy(kw)
+                kw_copy['weights'] = np.power(kw_copy['weights'],2)
+                self.hist_squares, self.bins = np.histogram(data, **kw_copy)
+                self.uncertainty = [[x,x] for x in np.sqrt(self.hist_squares)]
+            else:
+                self.uncertainty = []
+
         self.bin_width = self.bins[1:] - self.bins[:-1]
         self.bin_center = self.bins[:-1] + 0.5*self.bin_width
         self.set_vars()
@@ -579,7 +588,6 @@ class Hist(object):
         self.hist_normed = self.hist/float(self.sum)
         self.pdf = self.hist_normed/self.bin_width
         self.cdf = np.minimum(1,self.hist_normed.cumsum())
-        self.binomial_uncertainty = []
         if( all(self.bins>0) ):
             bins_ratio = self.bins[1:]/self.bins[:-1]
             self.log = all(np.isclose(bins_ratio,bins_ratio[0]))
@@ -599,8 +607,12 @@ class Hist(object):
         self.set_vars()
     
     def set_errors(self, probability_content = 0.683):
-        for N_i in self.hist:
-            self.binomial_uncertainty.append( self.sum*Efficiency_for_binomial_process(self.sum, int(N_i), probability_content)[1:] )
+        ### isinstance(self.sum,int) fails for np.int64...
+        is_int = (self.sum-int(self.sum))==0 
+        if( is_int ):
+            for N_i in self.hist:
+                print( type(self.sum) )
+                self.uncertainty.append( self.sum*Efficiency_for_binomial_process(self.sum, int(N_i), probability_content)[1:] )
     
     def plot(self, type="hist", ax=plt, step=False, **kw):
         if( type=="hist" ):
@@ -649,14 +661,14 @@ class Hist(object):
         return plot
     
     def plot_errorbar(self, ax=plt, type="hist", linestyle="None", fmt=".", markersize=10, **kw):
-        if( len(self.binomial_uncertainty)==0 ):
+        if( len(self.uncertainty)==0 ):
             self.set_errors()
         if( type=="hist" ):
             height = self.hist
-            uncertainty = self.binomial_uncertainty
+            uncertainty = self.uncertainty
         elif( type=="pdf" ):
             height = self.pdf
-            uncertainty = [uncertainty/self.sum/bin_width for (uncertainty,bin_width) in zip(self.binomial_uncertainty,self.bin_width)]
+            uncertainty = [uncertainty/self.sum/bin_width for (uncertainty,bin_width) in zip(self.uncertainty,self.bin_width)]
         return ax.errorbar(self.bin_center, height, list(zip(*uncertainty)), linestyle=linestyle, fmt=fmt, markersize=markersize, **kw)
     
     
