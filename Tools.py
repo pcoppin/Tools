@@ -611,7 +611,6 @@ class Hist(object):
         is_int = (self.sum-int(self.sum))==0 
         if( is_int ):
             for N_i in self.hist:
-                print( type(self.sum) )
                 self.uncertainty.append( self.sum*Efficiency_for_binomial_process(self.sum, int(N_i), probability_content)[1:] )
     
     def plot(self, type="hist", ax=plt, step=False, **kw):
@@ -863,6 +862,62 @@ def STK_selection(dd, primary='Proton', variance_mean=0.3, tight_cuts=False, low
     # res *= (N_HitSignal>6)
     return res
 
+def PSD_progressive_charge(dd):
+    required_pathlength = 8
+    
+    dd['PSD_prog'] = np.zeros(len(dd['E_total_BGO']))
+    w_good_L0 = (dd['PSD_length'][:,0]>required_pathlength) * (dd['PSD'][:,0]>0.1)
+    dd['PSD_prog'][w_good_L0] = dd['PSD'][w_good_L0,0]
+    
+    #charge_within = 0.25
+    ### 0.25 for 20 GeV, 0.5 for 200 TeV
+    charge_within = 0.25*np.ones(len(dd['Deposited_energy'])) + 0.0625*np.log10(dd['Deposited_energy']/20)
+
+    w_good_L1 = (dd['PSD_length'][:,1]>required_pathlength) * (dd['PSD'][:,1]>0.1)
+    w_good_L01 = w_good_L0 * w_good_L1 * (np.abs(dd['PSD_prog']-dd['PSD'][:,1])<charge_within)
+    w_better_L1 = w_good_L1 * ( (dd['PSD_prog']-dd['PSD'][:,1])>charge_within )
+    dd['PSD_prog'][w_good_L1 * (dd['PSD_prog']==0)] = dd['PSD'][w_good_L1*(dd['PSD_prog']==0),1]
+    dd['PSD_prog'][w_good_L01] = 0.5*(dd['PSD'][:,0]+dd['PSD'][:,1])[w_good_L01]
+    dd['PSD_prog'][w_better_L1] = dd['PSD'][w_better_L1,1]
+
+    w_good_L2 = (dd['PSD_length'][:,2]>required_pathlength) * (dd['PSD'][:,2]>0.1)
+    w_good_L012 = w_good_L01 * w_good_L2 * (np.abs(dd['PSD_prog']-dd['PSD'][:,2])<charge_within)
+    w_better_L2 = w_good_L2 * ( (dd['PSD_prog']-dd['PSD'][:,2])>charge_within )
+    dd['PSD_prog'][w_good_L2 * (dd['PSD_prog']==0)] = dd['PSD'][w_good_L2*(dd['PSD_prog']==0),2]
+    dd['PSD_prog'][w_good_L012] = 1/3*(dd['PSD'][:,0]+dd['PSD'][:,1]+dd['PSD'][:,2])[w_good_L012]
+    dd['PSD_prog'][w_better_L2] = dd['PSD'][w_better_L2,2]
+
+    w_good_L3 = (dd['PSD_length'][:,3]>required_pathlength) * (dd['PSD'][:,3]>0.1)
+    w_good_L0123 = w_good_L012 * w_good_L3 * (np.abs(dd['PSD_prog']-dd['PSD'][:,3])<charge_within)
+    w_better_L3 = w_good_L3 * ( (dd['PSD_prog']-dd['PSD'][:,3])>charge_within )
+    dd['PSD_prog'][w_good_L3 * (dd['PSD_prog']==0)] = dd['PSD'][w_good_L3*(dd['PSD_prog']==0),3]
+    dd['PSD_prog'][w_good_L0123] = 1/4*(dd['PSD'][:,0]+dd['PSD'][:,1]+dd['PSD'][:,2]+dd['PSD'][:,3])[w_good_L0123]
+    dd['PSD_prog'][w_better_L3] = dd['PSD'][w_better_L3,3]
+    
+def STK_progressive_charge(dd):
+    # Make it so that there are at least 1 layer of x and 1 layer of y
+    N = len(dd['E_total_BGO'])
+    dd['STK_prog'] = -1*np.ones(N)
+    w_stop = np.invert( np.ones(N, dtype=bool) )
+    counts = np.zeros(N, dtype=int)
+    w_even = np.zeros(N, dtype=bool)
+    w_odd = np.zeros(N, dtype=bool)
+    for i in range(12):
+        q_i = np.sqrt(dd['HitSignalEtaThetaCorr'][:,i])
+        w_ini = (q_i>0.5) * (dd['STK_prog']<0)
+        dd['STK_prog'][w_ini] = q_i[w_ini]
+        
+        w_stop += (~w_ini) * (q_i>0.5) * np.abs(q_i-dd['STK_prog']>0.4)
+        w_upd = (~w_ini) * (~w_stop) * (q_i>0.5) * (np.abs(q_i-dd['STK_prog'])<0.4)
+        dd['STK_prog'][w_upd] = (counts[w_upd]*dd['STK_prog'][w_upd]+q_i[w_upd])/(counts[w_upd]+1)
+        counts[w_ini+w_upd] += 1
+        if( (i%2==0) ):
+            w_even[w_ini+w_upd] = True
+        else:
+            w_odd[w_ini+w_upd] = True
+    ### Add new cut that progressive charge should at least be made up of one X and one Y layer
+    dd['STK_prog_acceptable'] = w_even*w_odd
+
 def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, vertex=0.5):
     from scipy.interpolate import make_interp_spline
     if( trigger in ['MIP1','MIP2'] ):
@@ -884,13 +939,17 @@ def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, vertex=0.5):
         E_bins_center = Fit_results_mean['E_bins_center'][:len(MPV)]
         
         for i in range(4):
-            #MPV_pe = np.interp(np.log10(E), np.log10(E_bins_center), MPV)
+            ### MPV (true, i.e. data)
             spl = make_interp_spline(np.log10(E_bins_center), MPV, k=1)
             MPV_pe = spl(np.log10(E))
-            #scale_pe = np.interp(np.log10(E), np.log10(E_bins_center), scale)
-            spl = make_interp_spline(np.log10(E_bins_center), scale, k=1)
+            
+            ### Scaling width needed for MC
+            #spl = make_interp_spline(np.log10(E_bins_center), scale, k=1)
+            # --> Better if scale keeps decreasing (for proton & helium)
+            spl = make_interp_spline(np.log10(E_bins_center[:10]), scale[:10], k=1)
             scale_pe = spl(np.log10(E))
-            #MPV_shift_pe = np.interp(np.log10(E), np.log10(E_bins_center), MPV_shift)
+            
+            ### Shift MPV needed for MC
             spl = make_interp_spline(np.log10(E_bins_center), MPV_shift, k=1)
             MPV_shift_pe = spl(np.log10(E))
 
@@ -962,6 +1021,8 @@ def PSD_selection_helium_paper(dd, PSD_charge='Xin'):
         w_y = (left<dd['charge_y']) * (dd['charge_y']<right)
         ratio = dd['charge_x']/np.maximum(dd['charge_y'],1e-9)
         return w_x * w_y * (ratio>0.5) * (ratio<2)
+    elif( PSD_charge=='PSD_prog' ):
+        return (left<dd['PSD_prog']) * (dd['PSD_prog']<right)
     else:
         raise Exception('Type of charge: {} unknown'.format(PSD_charge))
         return 0
