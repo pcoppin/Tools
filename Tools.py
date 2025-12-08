@@ -723,8 +723,39 @@ def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0, vertex=0.5):
     cutoff = -2 if( trigger=='MIP' ) else None
     return np.interp(np.log(E_BGO), np.log(E_bins_center[:cutoff]), weight[:cutoff])
 
-def Helium_to_ProtonPlusHelium(E_BGO):
-    return 1 - Proton_to_ProtonPlusHelium(E_BGO)
+def Proton_to_ProtonPlusHelium(E_BGO):
+    # E_BGO: 'E_total_BGO_SatCorrMLHe'
+    # Valid for HE-trigger + skim + ML-containment + non-zero-PSD + STK-prog-charge
+    lE = np.array([1.45154499, 1.75257499, 2.05360498, 2.35463498, 2.65566498, 2.95669497,
+                   3.25772497, 3.55875496, 3.85978496, 4.16081495, 4.46184495, 4.76287495])
+    r = np.array([0.62267733, 0.57313037, 0.54293046, 0.52705397, 0.51971385, 0.51288027, 
+                  0.4990033 , 0.48428092, 0.44696636, 0.41972326, 0.40847093, 0.4021978])
+    return np.interp(np.log10(E_BGO), lE, r)
+
+def Proton_to_ProtonPlusHelium2(E_BGO):
+    # E_BGO: 'E_total_BGO_SatCorrMLHe'
+    # Valid for HE-trigger + skim + ML-containment + non-zero-PSD + PSD XY ratio within factor 2 + PSD-prog-charge
+    lE = np.array([1.45154499, 1.75257499, 2.05360498, 2.35463498, 2.65566498, 2.95669497,
+                   3.25772497, 3.55875496, 3.85978496, 4.46184495, 5.06390494])
+    r = np.array([0.54824059, 0.48414507, 0.44840137, 0.43006744, 0.42225988, 0.4163755,
+                  0.4023597, 0.35728903, 0.32974207, 0.26842757, 0.31251958])
+    from scipy.interpolate import make_interp_spline
+    return make_interp_spline(lE, r, k=1)(np.log10(E_BGO))
+    #return np.interp(np.log10(E_BGO), lE, r)
+
+def Proton_to_ProtonPlusHelium3(E_BGO):
+    # E_BGO: 'E_total_BGO_SatCorrMLHe'
+    # Valid for HE-trigger + skim + ML-containment + non-zero-PSD + PSD XY ratio within factor 2 + PSD-prog-charge + STK-L0>2.5
+    lE = np.array([1.45154499, 1.75257499, 2.05360498, 2.35463498, 2.65566498, 2.95669497,
+                   3.25772497, 3.55875496, 3.85978496, 4.16081495, 4.46184495, 4.76287495, 5.36493494])
+    r = np.array([0.326079, 0.30480855, 0.29890644, 0.31056937, 0.32533639, 0.32331552,
+                  0.31719398, 0.26615158, 0.24601614, 0.16236184, 0.18417521, 0.30871181,0.39021629])
+    from scipy.interpolate import make_interp_spline
+    return make_interp_spline(lE, r, k=1)(np.log10(E_BGO))
+    #return np.interp(np.log10(E_BGO), lE, r)
+
+##def Helium_to_ProtonPlusHelium(E_BGO):
+##    return 1 - Proton_to_ProtonPlusHelium(E_BGO)
 
 def Reweight_events(z_stop, corr, nbins=1000, z_leftmost=-380, z_rightmost=480):
     """
@@ -878,21 +909,21 @@ def PSD_progressive_charge(dd):
     w_better_L1 = w_good_L1 * ( (dd['PSD_prog']-dd['PSD'][:,1])>charge_within )
     dd['PSD_prog'][w_good_L1 * (dd['PSD_prog']==0)] = dd['PSD'][w_good_L1*(dd['PSD_prog']==0),1]
     dd['PSD_prog'][w_good_L01] = 0.5*(dd['PSD'][:,0]+dd['PSD'][:,1])[w_good_L01]
-    dd['PSD_prog'][w_better_L1] = dd['PSD'][w_better_L1,1]
+    #dd['PSD_prog'][w_better_L1] = dd['PSD'][w_better_L1,1]
 
     w_good_L2 = (dd['PSD_length'][:,2]>required_pathlength) * (dd['PSD'][:,2]>0.1)
     w_good_L012 = w_good_L01 * w_good_L2 * (np.abs(dd['PSD_prog']-dd['PSD'][:,2])<charge_within)
     w_better_L2 = w_good_L2 * ( (dd['PSD_prog']-dd['PSD'][:,2])>charge_within )
     dd['PSD_prog'][w_good_L2 * (dd['PSD_prog']==0)] = dd['PSD'][w_good_L2*(dd['PSD_prog']==0),2]
     dd['PSD_prog'][w_good_L012] = 1/3*(dd['PSD'][:,0]+dd['PSD'][:,1]+dd['PSD'][:,2])[w_good_L012]
-    dd['PSD_prog'][w_better_L2] = dd['PSD'][w_better_L2,2]
+    #dd['PSD_prog'][w_better_L2] = dd['PSD'][w_better_L2,2]
 
     w_good_L3 = (dd['PSD_length'][:,3]>required_pathlength) * (dd['PSD'][:,3]>0.1)
     w_good_L0123 = w_good_L012 * w_good_L3 * (np.abs(dd['PSD_prog']-dd['PSD'][:,3])<charge_within)
     w_better_L3 = w_good_L3 * ( (dd['PSD_prog']-dd['PSD'][:,3])>charge_within )
     dd['PSD_prog'][w_good_L3 * (dd['PSD_prog']==0)] = dd['PSD'][w_good_L3*(dd['PSD_prog']==0),3]
     dd['PSD_prog'][w_good_L0123] = 1/4*(dd['PSD'][:,0]+dd['PSD'][:,1]+dd['PSD'][:,2]+dd['PSD'][:,3])[w_good_L0123]
-    dd['PSD_prog'][w_better_L3] = dd['PSD'][w_better_L3,3]
+    #dd['PSD_prog'][w_better_L3] = dd['PSD'][w_better_L3,3]
     
 def STK_progressive_charge(dd):
     # Make it so that there are at least 1 layer of x and 1 layer of y
@@ -929,13 +960,20 @@ def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, vertex=0.5):
     print('Reading:', source_file)
     with open(source_file, "rb") as f:
         Fit_results_mean = pickle.load(f)
+    with open(source_file.replace('Mean',''), "rb") as f:
+        Fit_results = pickle.load(f)
 
     for sample in MC_samples:
         dd[sample]["PSD_charge_corr"] = np.zeros( (len(dd[sample]["PSD_charge"]),4), dtype=float)
-        E = dd[sample]['E_total_BGO_SatCorrHelium']
+        E = dd[sample]['Deposited_energy']
         # No need to redo smearing for p15
         sample_to_use = sample.replace('_p15','').replace('_p12','').replace('_old', '').replace('_all','')
+        
+        ### Use the mean of the four layers
         MPV, weight, scale, MPV_shift = Fit_results_mean[sample_to_use]
+        ### Use the values of the first sublayer
+        #MPV, weight, scale, MPV_shift = list(zip(*Fit_results[(sample_to_use,0)]))
+        
         E_bins_center = Fit_results_mean['E_bins_center'][:len(MPV)]
         
         for i in range(4):
@@ -950,7 +988,7 @@ def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, vertex=0.5):
             scale_pe = spl(np.log10(E))
             
             ### Shift MPV needed for MC
-            spl = make_interp_spline(np.log10(E_bins_center), MPV_shift, k=1)
+            spl = make_interp_spline(np.log10(E_bins_center[:-1]), MPV_shift[:-1], k=1)
             MPV_shift_pe = spl(np.log10(E))
 
             q = dd[sample]["PSD_charge"][:,i]
@@ -1008,9 +1046,10 @@ def PSD_selection_proton_paper(dd, PSD_charge='Xin'):
         return 0
 
 def PSD_selection_helium_paper(dd, PSD_charge='Xin'):
-    E = dd['E_total_BGO']
+    E = dd['Deposited_energy']
     left = 1.85 + 0.02 * np.log10(E/10)
-    right = 2.8 + 0.007 * np.power(np.log10(E/10),4)
+    ##right = 2.8 + 0.007 * np.power(np.log10(E/10),4)
+    right = 2.8 + 0.01 * np.power(np.log10(E/10),4)
     if( PSD_charge=='Xin' ):
         q = dd['PSD_charge_corr'][:,4] if 'E_p' in dd else dd['PSD_charge_Xin_pro']
         return (left<q) * (q<right) * dd['sel_pro_STKtrack']
