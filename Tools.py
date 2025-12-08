@@ -735,13 +735,11 @@ def Proton_to_ProtonPlusHelium(E_BGO):
 def Proton_to_ProtonPlusHelium2(E_BGO):
     # E_BGO: 'E_total_BGO_SatCorrMLHe'
     # Valid for HE-trigger + skim + ML-containment + non-zero-PSD + PSD XY ratio within factor 2 + PSD-prog-charge
-    lE = np.array([1.45154499, 1.75257499, 2.05360498, 2.35463498, 2.65566498, 2.95669497,
-                   3.25772497, 3.55875496, 3.85978496, 4.46184495, 5.06390494])
-    r = np.array([0.54824059, 0.48414507, 0.44840137, 0.43006744, 0.42225988, 0.4163755,
-                  0.4023597, 0.35728903, 0.32974207, 0.26842757, 0.31251958])
-    from scipy.interpolate import make_interp_spline
-    return make_interp_spline(lE, r, k=1)(np.log10(E_BGO))
-    #return np.interp(np.log10(E_BGO), lE, r)
+    lE = np.array([1.45154499, 1.75257499, 2.05360498, 2.35463498, 2.65566498, 2.95669497, 3.25772497,
+                   3.55875496, 3.85978496, 4.16081495, 4.46184495, 4.76287495, 5.36493494])
+    r = np.array([0.52329269, 0.46459836, 0.43430369, 0.42116501, 0.41758812, 0.41435902, 0.4009292,
+                  0.36217396, 0.32686816, 0.24894826, 0.26910019, 0.30124061, 0.23546815])
+    return np.interp(np.log10(E_BGO), lE, r)
 
 def Proton_to_ProtonPlusHelium3(E_BGO):
     # E_BGO: 'E_total_BGO_SatCorrMLHe'
@@ -906,24 +904,18 @@ def PSD_progressive_charge(dd):
 
     w_good_L1 = (dd['PSD_length'][:,1]>required_pathlength) * (dd['PSD'][:,1]>0.1)
     w_good_L01 = w_good_L0 * w_good_L1 * (np.abs(dd['PSD_prog']-dd['PSD'][:,1])<charge_within)
-    w_better_L1 = w_good_L1 * ( (dd['PSD_prog']-dd['PSD'][:,1])>charge_within )
     dd['PSD_prog'][w_good_L1 * (dd['PSD_prog']==0)] = dd['PSD'][w_good_L1*(dd['PSD_prog']==0),1]
     dd['PSD_prog'][w_good_L01] = 0.5*(dd['PSD'][:,0]+dd['PSD'][:,1])[w_good_L01]
-    #dd['PSD_prog'][w_better_L1] = dd['PSD'][w_better_L1,1]
 
     w_good_L2 = (dd['PSD_length'][:,2]>required_pathlength) * (dd['PSD'][:,2]>0.1)
     w_good_L012 = w_good_L01 * w_good_L2 * (np.abs(dd['PSD_prog']-dd['PSD'][:,2])<charge_within)
-    w_better_L2 = w_good_L2 * ( (dd['PSD_prog']-dd['PSD'][:,2])>charge_within )
     dd['PSD_prog'][w_good_L2 * (dd['PSD_prog']==0)] = dd['PSD'][w_good_L2*(dd['PSD_prog']==0),2]
     dd['PSD_prog'][w_good_L012] = 1/3*(dd['PSD'][:,0]+dd['PSD'][:,1]+dd['PSD'][:,2])[w_good_L012]
-    #dd['PSD_prog'][w_better_L2] = dd['PSD'][w_better_L2,2]
 
     w_good_L3 = (dd['PSD_length'][:,3]>required_pathlength) * (dd['PSD'][:,3]>0.1)
     w_good_L0123 = w_good_L012 * w_good_L3 * (np.abs(dd['PSD_prog']-dd['PSD'][:,3])<charge_within)
-    w_better_L3 = w_good_L3 * ( (dd['PSD_prog']-dd['PSD'][:,3])>charge_within )
     dd['PSD_prog'][w_good_L3 * (dd['PSD_prog']==0)] = dd['PSD'][w_good_L3*(dd['PSD_prog']==0),3]
     dd['PSD_prog'][w_good_L0123] = 1/4*(dd['PSD'][:,0]+dd['PSD'][:,1]+dd['PSD'][:,2]+dd['PSD'][:,3])[w_good_L0123]
-    #dd['PSD_prog'][w_better_L3] = dd['PSD'][w_better_L3,3]
     
 def STK_progressive_charge(dd):
     # Make it so that there are at least 1 layer of x and 1 layer of y
