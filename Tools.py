@@ -728,26 +728,26 @@ def Proton_to_ProtonPlusHelium(E_BGO):
     # Valid for HE-trigger + skim + ML-containment + non-zero-PSD + STK-prog-charge
     lE = np.array([1.45154499, 1.75257499, 2.05360498, 2.35463498, 2.65566498, 2.95669497, 3.25772497,
                    3.55875496, 3.85978496, 4.16081495, 4.46184495, 4.76287495, 5.06390494, 5.36493494])
-    r = np.array([0.62309057, 0.57152305, 0.53944632, 0.52157511, 0.51181794, 0.50398032, 0.48902794,
-                  0.4744295, 0.43527452, 0.40954151, 0.39311714, 0.3909465, 0.47972973, 0.45454545])
+    r = np.array([0.63580346, 0.5842951, 0.55225541, 0.53433669, 0.52472218, 0.51676495,  0.50158811,
+                  0.48629751, 0.4463807, 0.42113425, 0.4075417,  0.43943707, 0.48920863, 0.5])
     return np.interp(np.log10(E_BGO), lE, r)
 
 def Proton_to_ProtonPlusHelium2(E_BGO):
     # E_BGO: 'E_total_BGO_SatCorrMLHe'
     # Valid for HE-trigger + skim + ML-containment + non-zero-PSD + PSD XY ratio within factor 2 + PSD-prog-charge
     lE = np.array([1.45154499, 1.75257499, 2.05360498, 2.35463498, 2.65566498, 2.95669497, 3.25772497,
-                   3.55875496, 3.85978496, 4.16081495, 4.46184495, 4.76287495])#, 5.36493494])
-    r = np.array([0.52329269, 0.46459836, 0.43430369, 0.42116501, 0.41758812, 0.41435902, 0.4009292,
-                  0.36217396, 0.32686816, 0.24894826, 0.26910019, 0.30124061])#, 0.23546815])
+                   3.55875496, 3.85978496, 4.16081495, 4.46184495, 5.06390494])
+    r = np.array([0.52223467, 0.45877773, 0.43060905, 0.41840201, 0.41019307, 0.40614247, 0.38812621,
+                  0.35608034, 0.32067904, 0.24386275, 0.25899411, 0.33554648])
     return np.interp(np.log10(E_BGO), lE, r)
 
 def Proton_to_ProtonPlusHelium3(E_BGO):
     # E_BGO: 'E_total_BGO_SatCorrMLHe'
     # Valid for HE-trigger + skim + ML-containment + non-zero-PSD + PSD XY ratio within factor 2 + PSD-prog-charge + STK-L0>2.5
-    lE = np.array([1.45154499, 1.75257499, 2.05360498, 2.35463498, 2.65566498, 2.95669497,
-                   3.25772497, 3.55875496, 3.85978496, 4.16081495, 4.46184495, 4.76287495, 5.36493494])
-    r = np.array([0.326079, 0.30480855, 0.29890644, 0.31056937, 0.32533639, 0.32331552,
-                  0.31719398, 0.26615158, 0.24601614, 0.16236184, 0.18417521, 0.30871181,0.39021629])
+    lE = np.array([1.45154499, 1.75257499, 2.05360498, 2.35463498, 2.65566498,
+                   2.95669497, 3.25772497, 3.55875496, 3.85978496, 4.46184495])
+    r = np.array([0.30227049, 0.28234876, 0.28270266, 0.29765883, 0.30830854,
+                  0.31098128, 0.30177994, 0.26165077, 0.23910349, 0.26])
     from scipy.interpolate import make_interp_spline
     return make_interp_spline(lE, r, k=1)(np.log10(E_BGO))
     #return np.interp(np.log10(E_BGO), lE, r)
@@ -891,7 +891,15 @@ def STK_selection(dd, primary='Proton', variance_mean=0.3, tight_cuts=False, low
     # res *= (N_HitSignal>6)
     return res
 
-def PSD_progressive_charge(dd):
+
+
+
+
+
+
+
+
+def PSD_progressive_charge_OLD(dd):
     required_pathlength = 8
     
     dd['PSD_prog'] = np.zeros(len(dd['E_total_BGO']))
@@ -916,6 +924,42 @@ def PSD_progressive_charge(dd):
     w_good_L0123 = w_good_L012 * w_good_L3 * (np.abs(dd['PSD_prog']-dd['PSD'][:,3])<charge_within)
     dd['PSD_prog'][w_good_L3 * (dd['PSD_prog']==0)] = dd['PSD'][w_good_L3*(dd['PSD_prog']==0),3]
     dd['PSD_prog'][w_good_L0123] = 1/4*(dd['PSD'][:,0]+dd['PSD'][:,1]+dd['PSD'][:,2]+dd['PSD'][:,3])[w_good_L0123]
+
+def PSD_progressive_charge(dd):
+    required_pathlength = 8
+    
+    N = len(dd['E_total_BGO'])
+    dd['PSD_prog'] = -1*np.ones(N)
+    w_stop = np.invert( np.ones(N, dtype=bool) )
+    counts = np.zeros(N, dtype=int)
+    w_even = np.zeros(N, dtype=bool)
+    w_odd = np.zeros(N, dtype=bool)
+    
+    charge_within = 0.25*np.ones(len(dd['Deposited_energy'])) + 0.0625*np.log10(dd['Deposited_energy']/20)
+    for i in range(4):
+        q_i = dd['PSD'][:,i] * (dd['PSD_length'][:,i]>required_pathlength)
+    
+        w_ini = (q_i>0.1) * (dd['PSD_prog']<0)
+        dd['PSD_prog'][w_ini] = q_i[w_ini]
+        
+        w_stop += (~w_ini) * (q_i>0.1) * (np.abs(q_i-dd['PSD_prog'])>charge_within)
+        w_upd = (~w_ini) * (~w_stop) * (q_i>0.1) * (np.abs(q_i-dd['PSD_prog'])<charge_within)
+        dd['PSD_prog'][w_upd] = (counts[w_upd]*dd['PSD_prog'][w_upd]+q_i[w_upd])/(counts[w_upd]+1)
+        counts[w_ini+w_upd] += 1
+        if( i<2 ):
+            w_even[w_ini+w_upd] = True
+        else:
+            w_odd[w_ini+w_upd] = True
+    ### Add new cut that progressive charge should at least be made up of one X and one Y layer
+    dd['PSD_prog_acceptable'] = w_even*w_odd
+    
+    
+    
+
+    
+
+    
+    
     
 def STK_progressive_charge(dd):
     # Make it so that there are at least 1 layer of x and 1 layer of y
@@ -930,7 +974,7 @@ def STK_progressive_charge(dd):
         w_ini = (q_i>0.5) * (dd['STK_prog']<0)
         dd['STK_prog'][w_ini] = q_i[w_ini]
         
-        w_stop += (~w_ini) * (q_i>0.5) * np.abs(q_i-dd['STK_prog']>0.4)
+        w_stop += (~w_ini) * (q_i>0.5) * (np.abs(q_i-dd['STK_prog'])>0.4)
         w_upd = (~w_ini) * (~w_stop) * (q_i>0.5) * (np.abs(q_i-dd['STK_prog'])<0.4)
         dd['STK_prog'][w_upd] = (counts[w_upd]*dd['STK_prog'][w_upd]+q_i[w_upd])/(counts[w_upd]+1)
         counts[w_ini+w_upd] += 1
@@ -976,7 +1020,9 @@ def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, vertex=0.5):
             ### Scaling width needed for MC
             #spl = make_interp_spline(np.log10(E_bins_center), scale, k=1)
             # --> Better if scale keeps decreasing (for proton & helium)
-            spl = make_interp_spline(np.log10(E_bins_center[:10]), scale[:10], k=1)
+            FLUKA = 'Fluka' in sample
+            keepn = 9 if( FLUKA) else 10
+            spl = make_interp_spline(np.log10(E_bins_center[:keepn]), scale[:keepn], k=1)
             scale_pe = spl(np.log10(E))
             
             ### Shift MPV needed for MC
