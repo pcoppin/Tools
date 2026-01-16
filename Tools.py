@@ -1083,14 +1083,25 @@ def PSD_selection_proton_paper(dd, PSD_charge='Xin'):
         raise Exception('Type of charge: {} unknown'.format(PSD_charge))
         return 0
 
-def PSD_selection_helium_paper(dd, PSD_charge='Xin', wider_charge_window=False):
+helium_left  = lambda E: 1.8 + 0.003 * np.power(np.log10(E/10),4)
+helium_right = lambda E: 2.8 + 0.01 * np.power(np.log10(E/10),4)
+    
+def PSD_selection_helium_paper(dd, PSD_charge='Xin', charge_window='default'):
     E = dd['Deposited_energy']
-    left = 1.85 + 0.02 * np.log10(E/10)
+    ##left = 1.85 + 0.02 * np.log10(E/10)
+    left = helium_left(E)
     ##right = 2.8 + 0.007 * np.power(np.log10(E/10),4)
-    right = 2.8 + 0.01 * np.power(np.log10(E/10),4)
-    if( wider_charge_window ):
-        left -= 0.1
-        right += 0.1
+    right = helium_right(E)
+    
+    width = right - left
+    if( charge_window=='wide' ):
+        left -= 0.05*width
+        right += 0.3*width
+    elif( charge_window=='narrow' ):
+        left += 0.05*width
+        right -= 0.3*width
+    right = np.minimum(right, 5.9)
+    
     if( PSD_charge=='Xin' ):
         q = dd['PSD_charge_corr'][:,4] if 'E_p' in dd else dd['PSD_charge_Xin_pro']
         return (left<q) * (q<right) * dd['sel_pro_STKtrack']
