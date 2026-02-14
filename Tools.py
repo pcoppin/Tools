@@ -793,7 +793,7 @@ def Reweight_events(z_stop, corr, nbins=1000, z_leftmost=-380, z_rightmost=480):
     h = Hist(z_stop, bins=bins[w_bins])
     ### Things to the right of the z-range get put in the last bin. We do this because the weight of
     ### the remaining events is affected by the fact that more (or less events) interacted beforehand.
-    h.Add_counts(-1, np.sum(z_stop>z_rightmost))
+    h.Add_counts(np.sum(z_stop>z_rightmost), idx=-1)
     
     cdf_normal = np.array([0] + list(h.cdf))
     cdf_rescaled = 1 - np.power(1-cdf_normal, corr)
