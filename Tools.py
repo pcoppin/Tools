@@ -95,7 +95,7 @@ def Efficiency_for_binomial_process(N,k,probability_content=0.683):
         N = int(N)
     if( isinstance(k,(np.int32,np.int64)) ):
         k = int(k)
-    
+
     if( (N>1000) and (k>50) and ((N-k)>50) ):
         from scipy.stats import norm
         sigma_gauss = norm.isf( 0.5*(1-probability_content) )
@@ -104,7 +104,7 @@ def Efficiency_for_binomial_process(N,k,probability_content=0.683):
         sigma = sigma_gauss * np.sqrt( k/p(N,2) + p(k,2)/p(N,3) )
         if( (eff>sigma) and ((1-eff)>sigma) ):
             return np.array([eff, sigma, sigma])
-    
+
     from decimal import Decimal
     if( (probability_content>=1) or (probability_content<=0) ):
         raise Exception("The probability content must be between 0 and 1!")
@@ -194,18 +194,18 @@ def Angular_seperation(pos_1, pos_2, ra_dec=False, degrees=True):
         y = np.sin(theta)*np.sin(phi)
         z = np.cos(theta)
         return x, y ,z
-    
+
     if( degrees ):
         theta_1, phi_1 = np.radians(pos_1)
         theta_2, phi_2 = np.radians(pos_2)
     else:
         theta_1, phi_1 = np.array(pos_1)
         theta_2, phi_2 = np.array(pos_2)
-    
+
     if( ra_dec ):
         theta_1 = 0.5*np.pi - theta_1
         theta_2 = 0.5*np.pi - theta_2
-    
+
     x1, y1, z1 = Spherical_to_cartesion(theta_1, phi_1)
     x2, y2, z2 = Spherical_to_cartesion(theta_2, phi_2)
     inproduct = x1*x2+y1*y2+z1*z2
@@ -280,14 +280,14 @@ def Langau(x, mu, sigma_landau, sigma_gauss):
     t_max = mu+99*sigma
     dt = min(sigma_gauss,sigma_landau)/20
     t = np.arange(t_min, t_max, dt)
-    
+
     y_landau = Landau(t, mu, sigma_landau)
     xx, tt = np.meshgrid(x,t)
     diff = xx-tt
     y_gauss = Gauss(diff, 0, sigma_gauss)
-    
+
     res = dt*np.sum(y_landau[:,np.newaxis]*y_gauss, axis=0)
-    
+
     if( hasattr(x, '__len__') ):
         return res
     else:
@@ -344,17 +344,17 @@ def kent_healpix(src_ra, src_dec, s, nside, allowed_error=0.05):
     :param  dpsi: nside of the healpix map
     """
     import healpy as hp
-    
+
     npix = hp.nside2npix(nside)
     pixels = np.arange(npix)
     theta, phi = hp.pix2ang(nside, pixels)
     pos_1 = [np.pi/2-src_dec, src_ra]
     #dpsi = [Angular_seperation(pos_1, [t,p], degrees=False) for t,p in zip(theta,phi)]
     #m = [kent(s, dpsi_i)*4*np.pi/npix for dpsi_i in dpsi]
-    
+
     dpsi = Angular_seperation(pos_1, [theta,phi], degrees=False)
     m = kent(s, dpsi)*4*np.pi/npix
-    
+
     sum_m = sum(m)
     if( (sum_m<(1-allowed_error)) or (sum_m>(1+allowed_error)) ):
         raise Exception("Normalisation of the map deviates from unity: {}".format(sum_m))
@@ -441,10 +441,10 @@ def Track_for_loop_progress(iterator, len_iterator, message=None):
 
     :type   iterator: int
     :param  iterator: Must run from 0 to len_iterator-1
-    
+
     :type   len_iterator: int
     :param  len_iterator: Number of times the loop is called
-    
+
     :type   message: str
     :param  message: additional output to be printed
     """
@@ -473,10 +473,10 @@ def Track_for_loop_progress(iterator, len_iterator, message=None):
 def Print_rounded(a, b):
     '''
     # Print a+-b rounded to 2 significant digits of the uncertainty
-    
+
     :type   a: float
     :param  a: Value of a single measurement
-    
+
     :type   b: float
     :param  b: Uncertainty on the measurement of a
     '''
@@ -555,14 +555,14 @@ class Hist(object):
                 kw["bins"] = 10
             if( isinstance(kw["bins"],int) ):
                 eps = 1.01
-                kw["bins"] = np.logspace(np.log10(min(data)/eps), 
+                kw["bins"] = np.logspace(np.log10(min(data)/eps),
                                          np.log10(max(data)*eps),
                                          kw["bins"])
         elif( ("bins" in kw) and isinstance(kw["bins"],str) and (kw["bins"]=="int") ):
             floor = int(min(data)+0.5-1e-6) - 0.5
             ceiling = int(max(data)-0.5+1e-6) + 1.5
             kw["bins"] = np.linspace(floor, ceiling, int(ceiling-floor)+1)
-        
+
         if( height ):
             if( log or ("bins" not in kw) ):
                 raise Exception("Bins must be specified explicitly when using height=True")
@@ -581,7 +581,7 @@ class Hist(object):
         self.bin_width = self.bins[1:] - self.bins[:-1]
         self.bin_center = self.bins[:-1] + 0.5*self.bin_width
         self.set_vars()
-        
+
     def set_vars(self):
         self.sum = np.sum(self.hist)
         self.hist_density = self.hist/self.bin_width
@@ -605,14 +605,14 @@ class Hist(object):
         new_hist, new_bin_edges = np.histogram(values, bins=self.bins)
         self.hist += new_hist
         self.set_vars()
-    
+
     def set_errors(self, probability_content = 0.683):
         ### isinstance(self.sum,int) fails for np.int64...
-        is_int = (self.sum-int(self.sum))==0 
+        is_int = (self.sum-int(self.sum))==0
         if( is_int ):
             for N_i in self.hist:
                 self.uncertainty.append( self.sum*Efficiency_for_binomial_process(self.sum, int(N_i), probability_content)[1:] )
-    
+
     def plot(self, type="hist", ax=plt, step=False, **kw):
         if( type=="hist" ):
             height = self.hist
@@ -637,7 +637,7 @@ class Hist(object):
             ylabel = '1-CDF'
         else:
             raise Exception("Unknown histogram type specified: {}. Please selected 'hist' (default), 'normed', 'density', 'pdf', 'cdf' or 'inv_cdf'.")
-        
+
         if( type=="cdf" ):
             y = [0] + list(self.cdf)
             plot = ax.step(self.bins, y, where='post', **kw)
@@ -658,7 +658,7 @@ class Hist(object):
             except:
                 ax.set_xscale('log')
         return plot
-    
+
     def plot_errorbar(self, ax=plt, type="hist", linestyle="None", fmt=".", markersize=10, **kw):
         if( len(self.uncertainty)==0 ):
             self.set_errors()
@@ -669,12 +669,12 @@ class Hist(object):
             height = self.pdf
             uncertainty = [uncertainty/self.sum/bin_width for (uncertainty,bin_width) in zip(self.uncertainty,self.bin_width)]
         return ax.errorbar(self.bin_center, height, list(zip(*uncertainty)), linestyle=linestyle, fmt=fmt, markersize=markersize, **kw)
-    
-    
-    
 
-    
-    
+
+
+
+
+
 ### DAMPE stuff
 
 def DmpTrigger(TriggerStat, idx, MC=None):
@@ -760,24 +760,24 @@ def Reweight_events(z_stop, corr, nbins=1000, z_leftmost=-380, z_rightmost=480):
     Generate weights for MC events to make it such that the amount of events that interact
     at any given depth (z-value) corresponds to what you would expect for simulation in
     which the cross section is rescaled
-    
+
     :type   z_stop: Array
     :param  z_stop: List containing the 'z_stop' values of the simulated events
 
     :type   corr: Float
     :param  corr: Factor by which the cross section is rescaled, i.e. 1.2 corresponds to a 20% increase
-    
+
     :type   nbins: Int
     :param  nbins: Number of bins used to divide the z-range of the detector
 
     :type   z_leftmost: float
     :param  z_leftmost: Defines the z-range over which the cross section will be scaled
-    
+
     :type   z_rightmost: float
     :param  z_rightmost: Defines the z-range over which the cross section will be scaled
     """
     from scipy.interpolate import interp1d
-    
+
     ### Bins spam the detector region from the top of PSD (z=-380) to the bottom of BGO (z=450)
     bins = np.linspace(-380, 450, nbins+1)
     bin_center = bins[:-1] + 0.5*np.diff(bins)
@@ -794,7 +794,7 @@ def Reweight_events(z_stop, corr, nbins=1000, z_leftmost=-380, z_rightmost=480):
     ### Things to the right of the z-range get put in the last bin. We do this because the weight of
     ### the remaining events is affected by the fact that more (or less events) interacted beforehand.
     h.Add_counts(np.sum(z_stop>z_rightmost), idx=-1)
-    
+
     cdf_normal = np.array([0] + list(h.cdf))
     cdf_rescaled = 1 - np.power(1-cdf_normal, corr)
 
@@ -802,7 +802,7 @@ def Reweight_events(z_stop, corr, nbins=1000, z_leftmost=-380, z_rightmost=480):
     ### These pdf values have as bins
     pdf_normal = np.diff(cdf_normal)/np.diff(h.bins)
     pdf_rescaled = np.diff(cdf_rescaled)/np.diff(h.bins)
-    
+
     ### The weights (number of interacting events) corresponds to the ratio of the PDFs
     weights = np.ones(nbins)
     weights[w] = pdf_rescaled / np.maximum(pdf_normal,1e-20)
@@ -813,7 +813,7 @@ def Reweight_events(z_stop, corr, nbins=1000, z_leftmost=-380, z_rightmost=480):
     w_interp = ~w_zero[:]
     w_interp[np.where(w)[0][-1]] = False
     weights[w_zero*w] = interp1d(np.arange(len(weights))[w*w_interp], weights[w*w_interp], kind='nearest', fill_value='extrapolate')( np.where(w_zero*w)[0] )
-    
+
     ### All bins to the right of the z-range now get the same re-scaled value as the weight of the last bin
     w_right = bin_center>z_rightmost
     weights[w_right] = weights[w][-1]
@@ -881,7 +881,7 @@ def STK_selection(dd, primary='Proton', variance_mean=0.3, tight_cuts=False, low
         low, high = low_high
     else:
         low, high = cut_range[(tight_cuts,primary)]
-    
+
     STK_charge = dd['Median_STK_charge_EtaThetaCorr']
     w_close_to_median = np.abs( np.sqrt(dd['HitSignalEtaThetaCorr'])-STK_charge[:,np.newaxis] ) < variance_mean
     N_close_to_median = np.sum(w_close_to_median, axis=1)
@@ -901,11 +901,11 @@ def STK_selection(dd, primary='Proton', variance_mean=0.3, tight_cuts=False, low
 
 def PSD_progressive_charge_OLD(dd):
     required_pathlength = 8
-    
+
     dd['PSD_prog'] = np.zeros(len(dd['E_total_BGO']))
     w_good_L0 = (dd['PSD_length'][:,0]>required_pathlength) * (dd['PSD'][:,0]>0.1)
     dd['PSD_prog'][w_good_L0] = dd['PSD'][w_good_L0,0]
-    
+
     #charge_within = 0.25
     ### 0.25 for 20 GeV, 0.5 for 200 TeV
     charge_within = 0.25*np.ones(len(dd['Deposited_energy'])) + 0.0625*np.log10(dd['Deposited_energy']/20)
@@ -927,21 +927,21 @@ def PSD_progressive_charge_OLD(dd):
 
 def PSD_progressive_charge(dd):
     required_pathlength = 8
-    
+
     N = len(dd['E_total_BGO'])
     dd['PSD_prog'] = -1*np.ones(N)
     w_stop = np.invert( np.ones(N, dtype=bool) )
     counts = np.zeros(N, dtype=int)
     w_even = np.zeros(N, dtype=bool)
     w_odd = np.zeros(N, dtype=bool)
-    
+
     charge_within = 0.25*np.ones(len(dd['Deposited_energy'])) + 0.0625*np.log10(dd['Deposited_energy']/20)
     for i in range(4):
         q_i = dd['PSD'][:,i] * (dd['PSD_length'][:,i]>required_pathlength)
-    
+
         w_ini = (q_i>0.1) * (dd['PSD_prog']<0)
         dd['PSD_prog'][w_ini] = q_i[w_ini]
-        
+
         w_stop += (~w_ini) * (q_i>0.1) * (np.abs(q_i-dd['PSD_prog'])>charge_within)
         w_upd = (~w_ini) * (~w_stop) * (q_i>0.1) * (np.abs(q_i-dd['PSD_prog'])<charge_within)
         dd['PSD_prog'][w_upd] = (counts[w_upd]*dd['PSD_prog'][w_upd]+q_i[w_upd])/(counts[w_upd]+1)
@@ -952,15 +952,15 @@ def PSD_progressive_charge(dd):
             w_odd[w_ini+w_upd] = True
     ### Add new cut that progressive charge should at least be made up of one X and one Y layer
     dd['PSD_prog_acceptable'] = w_even*w_odd
-    
-    
-    
 
-    
 
-    
-    
-    
+
+
+
+
+
+
+
 def STK_progressive_charge(dd):
     # Make it so that there are at least 1 layer of x and 1 layer of y
     N = len(dd['E_total_BGO'])
@@ -973,7 +973,7 @@ def STK_progressive_charge(dd):
         q_i = np.sqrt(dd['HitSignalEtaThetaCorr'][:,i])
         w_ini = (q_i>0.5) * (dd['STK_prog']<0)
         dd['STK_prog'][w_ini] = q_i[w_ini]
-        
+
         w_stop += (~w_ini) * (q_i>0.5) * (np.abs(q_i-dd['STK_prog'])>0.4)
         w_upd = (~w_ini) * (~w_stop) * (q_i>0.5) * (np.abs(q_i-dd['STK_prog'])<0.4)
         dd['STK_prog'][w_upd] = (counts[w_upd]*dd['STK_prog'][w_upd]+q_i[w_upd])/(counts[w_upd]+1)
@@ -1004,19 +1004,19 @@ def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, vertex=0.5):
         E = dd[sample]['Deposited_energy']
         # No need to redo smearing for p15
         sample_to_use = sample.replace('_p15','').replace('_p12','').replace('_old', '').replace('_all','')
-        
+
         ### Use the mean of the four layers
         MPV, weight, scale, MPV_shift = Fit_results_mean[sample_to_use]
         ### Use the values of the first sublayer
         #MPV, weight, scale, MPV_shift = list(zip(*Fit_results[(sample_to_use,0)]))
-        
+
         E_bins_center = Fit_results_mean['E_bins_center'][:len(MPV)]
-        
+
         for i in range(4):
             ### MPV (true, i.e. data)
             spl = make_interp_spline(np.log10(E_bins_center), MPV, k=1)
             MPV_pe = spl(np.log10(E))
-            
+
             ### Scaling width needed for MC
             #spl = make_interp_spline(np.log10(E_bins_center), scale, k=1)
             # --> Better if scale keeps decreasing (for proton & helium)
@@ -1024,7 +1024,7 @@ def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, vertex=0.5):
             keepn = 9 if( FLUKA) else 10
             spl = make_interp_spline(np.log10(E_bins_center[:keepn]), scale[:keepn], k=1)
             scale_pe = spl(np.log10(E))
-            
+
             ### Shift MPV needed for MC
             spl = make_interp_spline(np.log10(E_bins_center[:-1]), MPV_shift[:-1], k=1)
             MPV_shift_pe = spl(np.log10(E))
@@ -1085,14 +1085,14 @@ def PSD_selection_proton_paper(dd, PSD_charge='Xin'):
 
 helium_left  = lambda E: 1.8 + 0.003 * np.power(np.log10(E/10),4)
 helium_right = lambda E: 2.8 + 0.01 * np.power(np.log10(E/10),4)
-    
+
 def PSD_selection_helium_paper(dd, PSD_charge='Xin', charge_window='default'):
     E = dd['Deposited_energy']
     ##left = 1.85 + 0.02 * np.log10(E/10)
     left = helium_left(E)
     ##right = 2.8 + 0.007 * np.power(np.log10(E/10),4)
     right = helium_right(E)
-    
+
     width = right - left
     if( charge_window=='wide' ):
         left -= 0.05*width
@@ -1101,7 +1101,7 @@ def PSD_selection_helium_paper(dd, PSD_charge='Xin', charge_window='default'):
         left += 0.05*width
         right -= 0.3*width
     right = np.minimum(right, 5.9)
-    
+
     if( PSD_charge=='Xin' ):
         q = dd['PSD_charge_corr'][:,4] if 'E_p' in dd else dd['PSD_charge_Xin_pro']
         return (left<q) * (q<right) * dd['sel_pro_STKtrack']
@@ -1206,13 +1206,13 @@ def Combine_npy_dict(Filelist=[], keys=[],\
             keys.append( key )
     if( 'MIP_trigger' in keys ):
         keys.extend( ['MIP1_trigger','MIP2_trigger'] )
-        
+
     keys = np.unique(keys)
 
     for files in Filelist:
         data_is = [np.load(npy_dir+f, allow_pickle=True, encoding="latin1").item() for f in files]
         ########################################################################################################################
-        # Quick and dirty fix. Keeping this here so I can still run smearing, until all MC n-tuples are recreated 
+        # Quick and dirty fix. Keeping this here so I can still run smearing, until all MC n-tuples are recreated
         # Rename variables for old n-tuples and use proton ML tracks when asking for ion ones
         # old_keys = ["PSD_charge_STKtrack","PSD_length_STKtrack", "BGO_energy_STKtrack", "BGO_length_STKtrack",\
         #             "PSD_charge_BGOtrack","PSD_length_BGOtrack", "BGO_energy_BGOtrack", "BGO_length_BGOtrack",\
@@ -1269,14 +1269,14 @@ def Combine_npy_dict(Filelist=[], keys=[],\
     for key in ["E_p","E_total_BGO", "E_total_BGO_quench", "E_total_PSD", "E_primary_non_trig"]:
         if( key in data ):
             data[key] = 1e-3 * data[key]
-    
+
     # w = data['HE_trigger'] * data["Skimmed"]
     w = np.ones_like(data['E_p'], dtype=bool)
     for key in filters:
         if( 'MLcontainmentBGO' in key ):
             ML_conf = key.split('_')[1]
             addon = '_' + ML_conf
-            
+
             # BGO prediction fiducially contained in BGO
             BGO_TopZ, BGO_BottomZ = 46., 448.
             cut = 280
@@ -1296,7 +1296,7 @@ def Combine_npy_dict(Filelist=[], keys=[],\
         elif( 'MLcontainmentSTK' in key ):
             ML_conf = key.split('_')[1]
             addon = '_' + ML_conf
-            
+
             # STK prediction fiducially contained within PSD to BGO
             TopZ, BottomZ = -325, 448.
             cutTop, cutBottom = 440, 280
@@ -1311,15 +1311,15 @@ def Combine_npy_dict(Filelist=[], keys=[],\
             topY = data['STKSlopeY'+addon] * TopZ + data['STKInterceptY'+addon]
             ml_stk_fid = ml_stk_fid * (abs(topX)<cutTop) * (abs(topY)<cutTop)
             w = w * ml_stk_fid
-            
+
         elif( "NonZeroPSD" in key ):
             ML_conf = key.split('_')[1]
-            w = w * np.sum(data['PSD_charge_STKtrack_'+ML_conf]>0.1, axis=1, dtype=bool)   
+            w = w * np.sum(data['PSD_charge_STKtrack_'+ML_conf]>0.1, axis=1, dtype=bool)
         elif( key=='MIP_trigger' ):
             w = w * (data['MIP1_trigger']+data['MIP2_trigger'])
         else:
             w = w * data[key]
-            
+
     for key in data:
         if( key=="E_primary_non_trig" ):
             continue
@@ -1327,7 +1327,7 @@ def Combine_npy_dict(Filelist=[], keys=[],\
             if( "E_primary_non_trig" in data ):
                 data['E_primary_non_trig'] = np.concatenate( [data['E_primary_non_trig'],data['E_p'][~w][::10]] )
         data[key] = data[key][w]
-    
+
     for ML_conf in ['default','ions']:
         key_to_check = 'PSD_charge_STKtrack_{}'.format(ML_conf)
         if( key_to_check in data ):
@@ -1390,6 +1390,10 @@ HeliumFluka_filelist = [["allHe4-v6r0p15_1GeV_10GeV_FLUKA.npy",],\
                         ["allHe4-v6r0p10_1TeV_10TeV-FLUKA.npy",],\
                         ["allHe4-v6r0p10_10TeV_100TeV-FLUKA-p1.npy",],\
                         ["allHe4-v6r0p10_100TeV_500TeV-FLUKA.npy",]]
+Helium3_filelist = [["allHe3-v6r0p10_10GeV_100GeV_FTFP.npy",],\
+                    ["allHe3-v6r0p10_100GeV_1TeV_FTFP.npy",],\
+                    ["allHe3-v6r0p10_1TeV_10TeV-FTFP.npy",],\
+                    ["allHe3-v6r0p10_10TeV_100TeV-FTFP.npy",]]
 Lithium7_filelist = [["allLi7-v6r0p10_10GeV_100GeV_FTFP-p1.npy",],\
                      ["allLi7-v6r0p10_100GeV_1TeV_FTFP-p1.npy",],\
                      ["allLi7-v6r0p15_1TeV_10TeV_FTFP-p0.npy",],\
@@ -1463,6 +1467,7 @@ Proton_FullDiffraction_filelist = [["allProton-v6r0p15_1GeV_1TeV_FTFP_FullDiffra
 
 sample_sets = {'Proton': Proton_filelist, 'Proton_p15': Proton_p15_filelist, 'Proton_all': Proton_all_filelist,\
                'Helium': Helium_filelist, 'Helium_p12': Helium_p12_filelist, 'Helium_all': Helium_all_filelist,\
+               'Helium3': Helium3_filelist,\
                'Proton_old': Proton_old_filelist,\
                'Proton_TargetDiffraction': Proton_TargetDiffraction_filelist, 'Helium_TargetDiffraction': Helium_TargetDiffraction_filelist,\
                'Proton_FullDiffraction': Proton_FullDiffraction_filelist,\
@@ -1475,5 +1480,3 @@ sample_sets = {'Proton': Proton_filelist, 'Proton_p15': Proton_p15_filelist, 'Pr
                'Carbon': Carbon_filelist, 'Oxygen': Oxygen_filelist,\
                'CarbonFluka': CarbonFluka_filelist, 'OxygenFluka': OxygenFluka_filelist,\
                'BoronFluka': BoronFluka_filelist, 'NitrogenFluka': NitrogenFluka_filelist}
-
-
