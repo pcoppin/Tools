@@ -22,7 +22,7 @@ if( not os.path.isdir(Code_folder) ):
 
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:pink', 'tab:grey', 'tab:red',\
           'tab:brown', 'tab:olive']
-markers = ['o', 'v', '^', 's', 'd', '*']
+markers = ['o', 'v', '^', 's', 'd', '*', '<', '>', 'x', '2']
 linestyles = ['-', '--', ':', '-.']
 
 def logspace(min_range, max_range, counts):
@@ -1004,6 +1004,7 @@ def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, vertex=0.5):
         E = dd[sample]['Deposited_energy']
         # No need to redo smearing for p15
         sample_to_use = sample.replace('_p15','').replace('_p12','').replace('_old', '').replace('_all','')
+        sample_to_use = sample_to_use.replace('Helium3','Helium')
 
         ### Use the mean of the four layers
         MPV, weight, scale, MPV_shift = Fit_results_mean[sample_to_use]
@@ -1369,20 +1370,20 @@ Helium_filelist = [["allHe4-v6r0p10_10GeV_100GeV_FTFP.npy",],\
                    ["allHe4-v6r0p10_1TeV_10TeV-FTFP.npy",],\
                    ["allHe4-v6r0p10_10TeV_100TeV-FTFP.npy",],\
                    ["allHe4-v6r0p10_100TeV_500TeV-EPOSLHC.npy",]]
-Helium_p12_filelist = [['allHe4-v6r0p15_1GeV_10GeV_FTFP.npy',],
-                       ["allHe4-v6r0p12_10GeV_100GeV-FTFP_BGO_Quenching.npy",],\
-                       ["allHe4-v6r0p12_100GeV_1TeV-FTFP_BGO_Quenching.npy",],\
-                       ["allHe4-v6r0p12_1TeV_10TeV-FTFP-BGO_Quenching.npy",],\
-                       ["allHe4-v6r0p12_10TeV_100TeV-FTFP_BGO_Quenching.npy",],\
-                       ["allHe4-v6r0p12_100TeV_500TeV-EPOSLHC_reg-p1-p2.npy",],\
+Helium_p15_filelist = [['allHe4-v6r0p15_1GeV_10GeV_FTFP.npy',],
+                       ["allHe4-v6r0p12_10GeV_100GeV-FTFP_BGO_Quenching.npy"],\
+                       ["allHe4-v6r0p12_100GeV_1TeV-FTFP_BGO_Quenching.npy", "allHe4-v6r0p15_100GeV_1TeV_FTFP.npy"],\
+                       ["allHe4-v6r0p12_1TeV_10TeV-FTFP-BGO_Quenching.npy", "allHe4-v6r0p15_1TeV_10TeV_FTFP.npy"],\
+                       ["allHe4-v6r0p12_10TeV_100TeV-FTFP_BGO_Quenching.npy", "allHe4-v6r0p15_10TeV_100TeV_EPOSLHC_FTFP.npy"],\
+                       ["allHe4-v6r0p12_100TeV_500TeV-EPOSLHC_reg-p1-p2.npy", "allHe4-v6r0p15_100TeV_500TeV_EPOSLHC_FTFP.npy"],\
                        ["allHe4-v6r0p15_500TeV_1PeV-EPOSLHC_FTFP.npy","allHe4-v6r0p15_500TeV_1PeV_EPOSLHC_BERT-p1.npy"],\
                        ['allHe4-v6r0p16_1PeV_5PeV-EPOSLHC_FTFP.npy']]
 Helium_all_filelist = [['allHe4-v6r0p15_1GeV_10GeV_FTFP.npy',],
                        ["allHe4-v6r0p10_10GeV_100GeV_FTFP.npy","allHe4-v6r0p12_10GeV_100GeV-FTFP_BGO_Quenching.npy"],\
-                       ["allHe4-v6r0p10_100GeV_1TeV_FTFP.npy","allHe4-v6r0p12_100GeV_1TeV-FTFP_BGO_Quenching.npy"],\
-                       ["allHe4-v6r0p10_1TeV_10TeV-FTFP.npy","allHe4-v6r0p12_1TeV_10TeV-FTFP-BGO_Quenching.npy"],\
-                       ["allHe4-v6r0p10_10TeV_100TeV-FTFP.npy","allHe4-v6r0p12_10TeV_100TeV-FTFP_BGO_Quenching.npy"],\
-                       ["allHe4-v6r0p10_100TeV_500TeV-EPOSLHC.npy","allHe4-v6r0p12_100TeV_500TeV-EPOSLHC_reg-p1-p2.npy"],\
+                       ["allHe4-v6r0p10_100GeV_1TeV_FTFP.npy","allHe4-v6r0p12_100GeV_1TeV-FTFP_BGO_Quenching.npy", "allHe4-v6r0p15_100GeV_1TeV_FTFP.npy"],\
+                       ["allHe4-v6r0p10_1TeV_10TeV-FTFP.npy","allHe4-v6r0p12_1TeV_10TeV-FTFP-BGO_Quenching.npy", "allHe4-v6r0p15_1TeV_10TeV_FTFP.npy"],\
+                       ["allHe4-v6r0p10_10TeV_100TeV-FTFP.npy","allHe4-v6r0p12_10TeV_100TeV-FTFP_BGO_Quenching.npy", "allHe4-v6r0p15_10TeV_100TeV_EPOSLHC_FTFP.npy"],\
+                       ["allHe4-v6r0p10_100TeV_500TeV-EPOSLHC.npy","allHe4-v6r0p12_100TeV_500TeV-EPOSLHC_reg-p1-p2.npy", "allHe4-v6r0p15_100TeV_500TeV_EPOSLHC_FTFP.npy"],\
                        ['allHe4-v6r0p16_1PeV_5PeV-EPOSLHC_FTFP.npy']]
 HeliumFluka_filelist = [["allHe4-v6r0p15_1GeV_10GeV_FLUKA.npy",],\
                         ["allHe4-v6r0p10_10GeV_100GeV-FLUKA.npy",],\
@@ -1466,7 +1467,7 @@ Helium_TargetDiffraction_filelist = [["allHe4-v6r0p15_1GeV_1TeV_FTFP_Diffraction
 Proton_FullDiffraction_filelist = [["allProton-v6r0p15_1GeV_1TeV_FTFP_FullDiffractionOn.npy",],]
 
 sample_sets = {'Proton': Proton_filelist, 'Proton_p15': Proton_p15_filelist, 'Proton_all': Proton_all_filelist,\
-               'Helium': Helium_filelist, 'Helium_p12': Helium_p12_filelist, 'Helium_all': Helium_all_filelist,\
+               'Helium': Helium_filelist, 'Helium_p15': Helium_p15_filelist, 'Helium_all': Helium_all_filelist,\
                'Helium3': Helium3_filelist,\
                'Proton_old': Proton_old_filelist,\
                'Proton_TargetDiffraction': Proton_TargetDiffraction_filelist, 'Helium_TargetDiffraction': Helium_TargetDiffraction_filelist,\
