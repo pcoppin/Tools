@@ -820,13 +820,15 @@ def Reweight_events(z_stop, corr, nbins=1000, z_leftmost=-380, z_rightmost=480):
 
     return [h, pdf_normal, pdf_rescaled, cdf_normal, cdf_rescaled, weights, bins, bin_center]
 
-def Reweight(MCs, rescaling_factor=1., samples=None, Pickle_dir=None):
-    import pickle
+def Reweight(MCs, rescaling_factor=1., samples=None, input_dir=None):
+    import sys
+    sys.path.insert(1, '/beegfs/dampe/public/paul/XS_correction_API')
+    import Cross_section_weights
     from copy import deepcopy
     if samples is None:
         samples = MCs.keys()
-    if( Pickle_dir is None ):
-        Pickle_dir = Code_folder + 'z_classifier_PROTON_HELIUM/Reweighting/WeightingPickles/'
+    if( input_dir is None ):
+        input_dir = Code_folder + 'z_classifier_PROTON_HELIUM/Reweighting/WeightingFiles/'
     for sample in samples:
         d = MCs[sample]
         if( rescaling_factor==1 ):
@@ -836,23 +838,34 @@ def Reweight(MCs, rescaling_factor=1., samples=None, Pickle_dir=None):
             return None
         sample_short = sample.replace('_p15','').replace('_p12','').replace('_all','')
         if( rescaling_factor=='Geant4_to_FLUKA' ):
-            Pickle_file = '{}_Geant4_to_FLUKA.pickle'.format(sample_short)
+            input_file = '{}_Geant4_to_FLUKA.bin'.format(sample_short)
         elif( rescaling_factor=='Correct_to_measured' ):
-            Pickle_file = '{}_to_Measured.pickle'.format(sample_short)
+            input_file = '{}_to_Measured.bin'.format(sample_short)
         else:
             dummy = sample.replace('_p12','').replace('_p15','').replace('_TargetDiffraction','').replace('_FullDiffraction','')
-            Pickle_file = '{}_PSD{:04d}_STK{:04d}_BGO{:04d}.pickle'.format(dummy,
-                                                                           int(1e3*rescaling_factor[0]),
-                                                                           int(1e3*rescaling_factor[1]),
-                                                                           int(1e3*rescaling_factor[2]))
+            input_file = '{}_PSD{:04d}_STK{:04d}_BGO{:04d}.bin'.format(dummy,
+                                                                       int(1e3*rescaling_factor[0]),
+                                                                       int(1e3*rescaling_factor[1]),
+                                                                       int(1e3*rescaling_factor[2]))
 
-        Pickle_file = Pickle_dir + Pickle_file
-        with open(Pickle_file, 'rb') as f:
-            interpolator = pickle.load(f)
-        x = np.log10( d['E_p'] )
-        y = d['pv_cos_theta']
-        z = d['stop_z']
-        scaling_factor = interpolator(np.dstack((x,y,z)))[0]
+        #Pickle_file = Pickle_dir + Pickle_file
+        #with open(Pickle_file, 'rb') as f:
+        #    interpolator = pickle.load(f)
+        #x = np.log10( d['E_p'] )
+        #y = d['pv_cos_theta']
+        #z = d['stop_z']
+        #scaling_factor = interpolator(np.dstack((x,y,z)))[0]
+
+        # Need to import these functions here AND define Contained
+        grid_values = Cross_section_weights.Load_grid_values(input_dir + input_file)
+        interpolator = Cross_section_weights.RegularGridInterpolator(grid_values[:3], grid_values[3], method='linear',
+                                                                        bounds_error=False, fill_value=None)
+        Contained = Cross_section_weights.TrueContainment(d)
+        scaling_factor = np.ones(len(d['E_p']))
+        x = np.log10( d['E_p'][Contained] )
+        y = d['pv_cos_theta'][Contained]
+        z = d['stop_z'][Contained]
+        scaling_factor[Contained] = interpolator(np.dstack((x,y,z)))[0]
 
         if( np.any(np.isnan(scaling_factor)) ):
             raise Exception('NAN in scaling factors! Investigate interpolator and check e.g. validity energy range.')
@@ -866,6 +879,7 @@ def Reweight(MCs, rescaling_factor=1., samples=None, Pickle_dir=None):
             d['Original_MC_weights'] = deepcopy(d['MC_weights'])
         d['weight'] = d['Original_weight'] * scaling_factor
         d['MC_weights'] = d['Original_MC_weights'] * scaling_factor
+
 
 def STK_selection(dd, primary='Proton', variance_mean=0.3, tight_cuts=False, low_high=None, n_med=None):
     cut_range = {(False,'Proton'):  [0.8, 1.3],
@@ -1079,6 +1093,8 @@ def PSD_selection_proton_paper(dd, PSD_charge='Xin'):
         w = (left<dd['charge_xy']) * (dd['charge_xy']<right)
         w = w * (dd['charge_x']>0.1) * (dd['charge_y']>0.1)
         return w
+    elif( PSD_charge=='PSD_prog' ):
+        return (left<dd['PSD_prog']) * (dd['PSD_prog']<right)
 
     else:
         raise Exception('Type of charge: {} unknown'.format(PSD_charge))
