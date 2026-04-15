@@ -1400,6 +1400,7 @@ Helium_all_filelist = [['allHe4-v6r0p15_1GeV_10GeV_FTFP.npy',],
                        ["allHe4-v6r0p10_1TeV_10TeV-FTFP.npy","allHe4-v6r0p12_1TeV_10TeV-FTFP-BGO_Quenching.npy", "allHe4-v6r0p15_1TeV_10TeV_FTFP.npy"],\
                        ["allHe4-v6r0p10_10TeV_100TeV-FTFP.npy","allHe4-v6r0p12_10TeV_100TeV-FTFP_BGO_Quenching.npy", "allHe4-v6r0p15_10TeV_100TeV_EPOSLHC_FTFP.npy"],\
                        ["allHe4-v6r0p10_100TeV_500TeV-EPOSLHC.npy","allHe4-v6r0p12_100TeV_500TeV-EPOSLHC_reg-p1-p2.npy", "allHe4-v6r0p15_100TeV_500TeV_EPOSLHC_FTFP.npy"],\
+                       ["allHe4-v6r0p15_500TeV_1PeV-EPOSLHC_FTFP.npy","allHe4-v6r0p15_500TeV_1PeV_EPOSLHC_BERT-p1.npy"],\
                        ['allHe4-v6r0p16_1PeV_5PeV-EPOSLHC_FTFP.npy']]
 HeliumFluka_filelist = [["allHe4-v6r0p15_1GeV_10GeV_FLUKA.npy",],\
                         ["allHe4-v6r0p10_10GeV_100GeV-FLUKA.npy",],\
