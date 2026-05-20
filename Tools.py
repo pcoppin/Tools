@@ -736,9 +736,9 @@ def Proton_to_ProtonPlusHelium2(E_BGO):
     # E_BGO: 'E_total_BGO_SatCorrMLHe'
     # Valid for HE-trigger + skim + ML-containment + non-zero-PSD + PSD XY ratio within factor 2 + PSD-prog-charge
     lE = np.array([1.45154499, 1.75257499, 2.05360498, 2.35463498, 2.65566498, 2.95669497, 3.25772497,
-                   3.55875496, 3.85978496, 4.16081495, 4.46184495, 5.06390494])
+                   3.55875496, 3.85978496, 4.16081495, 4.46184495, 5.06390494, 5.36493494])
     r = np.array([0.52223467, 0.45877773, 0.43060905, 0.41840201, 0.41019307, 0.40614247, 0.38812621,
-                  0.35608034, 0.32067904, 0.24386275, 0.25899411, 0.33554648])
+                  0.35608034, 0.32067904, 0.24386275, 0.25899411, 0.31999592, 0.38827008])
     return np.interp(np.log10(E_BGO), lE, r)
 
 def Proton_to_ProtonPlusHelium3(E_BGO):
