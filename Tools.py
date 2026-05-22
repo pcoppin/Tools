@@ -1381,6 +1381,10 @@ ProtonFluka_filelist =[["allProton-v6r0p15_1GeV_10GeV_FLUKA.npy",],\
                        ["allProton-v6r0p15_1TeV_10TeV-FLUKA.npy",],\
                        ["allProton-v6r0p15_10TeV_100TeV-FLUKA.npy",],\
                        ["allProton-v6r0p15_100TeV_1PeV-FLUKA.npy",]]
+Deuteron_filelist = [['allDeuteron-v6r0p15_10GeV_100GeV_FTFP.npy',],
+                     ['allDeuteron-v6r0p15_100GeV_1TeV_FTFP.npy',],
+                     ['allDeuteron-v6r0p15_1TeV_10TeV_FTFP.npy',],
+                     ['allDeuteron-v6r0p15_10TeV_100TeV_FTFP.npy',]]
 Helium_filelist = [["allHe4-v6r0p10_10GeV_100GeV_FTFP.npy",],\
                    ["allHe4-v6r0p10_100GeV_1TeV_FTFP.npy",],\
                    ["allHe4-v6r0p10_1TeV_10TeV-FTFP.npy",],\
@@ -1484,6 +1488,7 @@ Helium_TargetDiffraction_filelist = [["allHe4-v6r0p15_1GeV_1TeV_FTFP_Diffraction
 Proton_FullDiffraction_filelist = [["allProton-v6r0p15_1GeV_1TeV_FTFP_FullDiffractionOn.npy",],]
 
 sample_sets = {'Proton': Proton_filelist, 'Proton_p15': Proton_p15_filelist, 'Proton_all': Proton_all_filelist,\
+               'Deuteron': Deuteron_filelist,\
                'Helium': Helium_filelist, 'Helium_p15': Helium_p15_filelist, 'Helium_all': Helium_all_filelist,\
                'Helium3': Helium3_filelist,\
                'Proton_old': Proton_old_filelist,\
