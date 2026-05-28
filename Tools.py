@@ -2,6 +2,7 @@
 
 import os
 import pickle
+from profile import run
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -435,41 +436,6 @@ def toYearFraction(date):
 
     return date.year + fraction
 
-def Track_for_loop_progress(iterator, len_iterator, message=None):
-    """
-    Track the progress of a for loop using print statements
-
-    :type   iterator: int
-    :param  iterator: Must run from 0 to len_iterator-1
-
-    :type   len_iterator: int
-    :param  len_iterator: Number of times the loop is called
-
-    :type   message: str
-    :param  message: additional output to be printed
-    """
-    import timeit
-    import sys
-    from IPython.display import clear_output
-    if( iterator==0 ):
-        global Track_for_loop_progress_start
-        Track_for_loop_progress_start = timeit.default_timer()
-    stop = timeit.default_timer()
-    if( (iterator/len_iterator)<0.05 ):
-        expected_time = 0.0
-    else:
-        time_perc = timeit.default_timer()
-        expected_time = np.round((time_perc-Track_for_loop_progress_start)/((iterator+1)/len_iterator), 2)
-    clear_output(wait=True)
-    print("Current progress:", np.round( (iterator+1)/len_iterator*100, 2), "%")
-    print("Current run time:", int((stop-Track_for_loop_progress_start)/60),"min", int((stop-Track_for_loop_progress_start)%60), "s")
-    print("Expected run time:", int(expected_time/60),"min", int(expected_time%60), "s")
-    if( message ):
-        print(message)
-    sys.stdout.flush()
-    if( iterator==(len_iterator-1) ):
-        del Track_for_loop_progress_start
-
 def Print_rounded(a, b):
     '''
     # Print a+-b rounded to 2 significant digits of the uncertainty
@@ -547,6 +513,15 @@ def Rigidity_to_kinetic_energy(rigidity, charge=1, mass=0.931):
 
 def Kinetic_energy_to_rigidity(Ekin, charge=1, mass=0.931):
     return np.sqrt(np.power(Ekin+mass,2)-mass**2)/charge
+
+def running_mean(x, N):
+    # x: numpy array with value
+    # N: Odd number specifying the number bins over which to average
+    # OUTPUT: array of the same length
+    pad = N // 2
+    x_padded = np.pad(x, pad, mode='edge')
+    cumsum = np.cumsum(np.insert(x_padded, 0, 0))
+    return (cumsum[N:] - cumsum[:-N]) / float(N)
 
 class Hist(object):
     def __init__(self, data, log=False, height=False, **kw):
@@ -703,7 +678,7 @@ def PSD_charge_fit(loge, *p):
 def PSD_weight_fit(loge, *p):
     return p[0] + p[1]*loge + p[2]*np.power(loge,2) + p[3]*np.power(loge,p[4])
 
-def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0, vertex=0.5):
+def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0, vertex=0.5, N_average_over=1):
     # Smearing splines for MIP are for x and y
     sample_to_use = sample.replace('_p15','').replace('_p12','').replace('_old', '').replace('_all','')
     if( trigger in ['MIP1','MIP2'] ):
@@ -721,7 +696,16 @@ def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0, vertex=0.5):
         MPV, weight, scale, MPV_shift = list(zip(*Fit_results[(sample_to_use,PSD_sublayer)]))
         E_bins_center = Fit_results['E_bins_center']
     cutoff = -2 if( trigger=='MIP' ) else None
-    return np.interp(np.log(E_BGO), np.log(E_bins_center[:cutoff]), weight[:cutoff])
+    if( cutoff is None ):
+        w_zero = np.array(weight)<1e-4
+        if( np.any(w_zero) ):
+            idx = np.where(w_zero)[0][0]
+            cutoff = idx-1
+
+    #print(sample, cutoff)
+    
+    #return np.interp(np.log(E_BGO), np.log(E_bins_center[:cutoff]), weight[:cutoff])
+    return np.interp(np.log(E_BGO), np.log(E_bins_center[:cutoff]), running_mean(np.array(weight[:cutoff]),N_average_over))
 
 def Proton_to_ProtonPlusHelium(E_BGO):
     # E_BGO: 'E_total_BGO_SatCorrMLHe'
