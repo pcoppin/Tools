@@ -514,14 +514,35 @@ def Rigidity_to_kinetic_energy(rigidity, charge=1, mass=0.931):
 def Kinetic_energy_to_rigidity(Ekin, charge=1, mass=0.931):
     return np.sqrt(np.power(Ekin+mass,2)-mass**2)/charge
 
+# def running_mean(x, N):
+#     # x: numpy array with value
+#     # N: Odd number specifying the number bins over which to average
+#     # OUTPUT: array of the same length
+#     pad = N // 2
+#     x_padded = np.pad(x, pad, mode='edge')
+#     cumsum = np.cumsum(np.insert(x_padded, 0, 0))
+#     return (cumsum[N:] - cumsum[:-N]) / float(N)
+
 def running_mean(x, N):
     # x: numpy array with value
     # N: Odd number specifying the number bins over which to average
     # OUTPUT: array of the same length
-    pad = N // 2
-    x_padded = np.pad(x, pad, mode='edge')
-    cumsum = np.cumsum(np.insert(x_padded, 0, 0))
-    return (cumsum[N:] - cumsum[:-N]) / float(N)
+    if( (N%2)==0 ):
+        raise Exception('Please use an odd value for N.')
+    N_x = len(x)
+    idxs = np.arange(N_x)
+    idx_shift = (N-1)//2
+    d_to_left = idxs
+    d_to_right = N_x-1-idxs
+    d_to_use = np.minimum(np.minimum(d_to_left,d_to_right),idx_shift)
+    left_idx = idxs-d_to_use
+    right_idx = idxs+d_to_use+1
+    N_idx = right_idx - left_idx
+    out = np.zeros_like(x)
+    for i in range(N_x):
+        out[i] = np.sum(x[left_idx[i]:right_idx[i]])
+    out = out/N_idx
+    return out
 
 class Hist(object):
     def __init__(self, data, log=False, height=False, **kw):
@@ -924,34 +945,36 @@ def PSD_progressive_charge_OLD(dd):
     dd['PSD_prog'][w_good_L0123] = 1/4*(dd['PSD'][:,0]+dd['PSD'][:,1]+dd['PSD'][:,2]+dd['PSD'][:,3])[w_good_L0123]
 
 def PSD_progressive_charge(dd):
-    required_pathlength = 8
+    dd['PSD_prog'], dd['PSD_prog_acceptable'] = PSD_progressive_charge_base(dd['E_total_BGO'],
+                                                                            dd['PSD'],
+                                                                            dd['PSD_length'])
 
-    N = len(dd['E_total_BGO'])
-    dd['PSD_prog'] = -1*np.ones(N)
+def PSD_progressive_charge_base(Edep, Q, L, required_pathlength=8.):
+    N = len(Q)
+    PSD_prog = -1*np.ones(N)
     w_stop = np.invert( np.ones(N, dtype=bool) )
     counts = np.zeros(N, dtype=int)
     w_even = np.zeros(N, dtype=bool)
     w_odd = np.zeros(N, dtype=bool)
 
-    charge_within = 0.25*np.ones(len(dd['Deposited_energy'])) + 0.0625*np.log10(dd['Deposited_energy']/20)
+    charge_within = 0.25*np.ones(len(Edep)) + 0.0625*np.log10(Edep/20)
     for i in range(4):
-        q_i = dd['PSD'][:,i] * (dd['PSD_length'][:,i]>required_pathlength)
+        q_i = Q[:,i] * (L[:,i]>required_pathlength)
 
-        w_ini = (q_i>0.1) * (dd['PSD_prog']<0)
-        dd['PSD_prog'][w_ini] = q_i[w_ini]
+        w_ini = (q_i>0.1) * (PSD_prog<0)
+        PSD_prog[w_ini] = q_i[w_ini]
 
-        w_stop += (~w_ini) * (q_i>0.1) * (np.abs(q_i-dd['PSD_prog'])>charge_within)
-        w_upd = (~w_ini) * (~w_stop) * (q_i>0.1) * (np.abs(q_i-dd['PSD_prog'])<charge_within)
-        dd['PSD_prog'][w_upd] = (counts[w_upd]*dd['PSD_prog'][w_upd]+q_i[w_upd])/(counts[w_upd]+1)
+        w_stop += (~w_ini) * (q_i>0.1) * (np.abs(q_i-PSD_prog)>charge_within)
+        w_upd = (~w_ini) * (~w_stop) * (q_i>0.1) * (np.abs(q_i-PSD_prog)<charge_within)
+        PSD_prog[w_upd] = (counts[w_upd]*PSD_prog[w_upd]+q_i[w_upd])/(counts[w_upd]+1)
         counts[w_ini+w_upd] += 1
         if( i<2 ):
             w_even[w_ini+w_upd] = True
         else:
             w_odd[w_ini+w_upd] = True
     ### Add new cut that progressive charge should at least be made up of one X and one Y layer
-    dd['PSD_prog_acceptable'] = w_even*w_odd
-
-
+    PSD_prog_acceptable = w_even*w_odd
+    return PSD_prog, PSD_prog_acceptable
 
 
 
