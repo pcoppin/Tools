@@ -944,12 +944,12 @@ def PSD_progressive_charge_OLD(dd):
     dd['PSD_prog'][w_good_L3 * (dd['PSD_prog']==0)] = dd['PSD'][w_good_L3*(dd['PSD_prog']==0),3]
     dd['PSD_prog'][w_good_L0123] = 1/4*(dd['PSD'][:,0]+dd['PSD'][:,1]+dd['PSD'][:,2]+dd['PSD'][:,3])[w_good_L0123]
 
-def PSD_progressive_charge(dd):
+def PSD_progressive_charge(dd, **kwargs):
     dd['PSD_prog'], dd['PSD_prog_acceptable'] = PSD_progressive_charge_base(dd['E_total_BGO'],
                                                                             dd['PSD'],
-                                                                            dd['PSD_length'])
+                                                                            dd['PSD_length'], **kwargs)
 
-def PSD_progressive_charge_base(Edep, Q, L, required_pathlength=8.):
+def PSD_progressive_charge_base(Edep, Q, L, required_pathlength=8., charge_within=None):
     N = len(Q)
     PSD_prog = -1*np.ones(N)
     w_stop = np.invert( np.ones(N, dtype=bool) )
@@ -957,7 +957,14 @@ def PSD_progressive_charge_base(Edep, Q, L, required_pathlength=8.):
     w_even = np.zeros(N, dtype=bool)
     w_odd = np.zeros(N, dtype=bool)
 
-    charge_within = 0.25*np.ones(len(Edep)) + 0.0625*np.log10(Edep/20)
+    if( charge_within is None ):
+        charge_within = 0.25*np.ones(len(Edep)) + 0.0625*np.log10(Edep/20)
+    elif( charge_within=='Doubled' ):
+        charge_within = 0.5*np.ones(len(Edep)) + 0.125*np.log10(Edep/20)
+    elif( charge_within=='Tripled' ):
+        charge_within = 0.75*np.ones(len(Edep)) + 0.1875*np.log10(Edep/20)
+    elif( charge_within=='Loose' ):
+        charge_within = np.ones(len(Edep)) + 0.25*np.log10(Edep/20)
     for i in range(4):
         q_i = Q[:,i] * (L[:,i]>required_pathlength)
 
