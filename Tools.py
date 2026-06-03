@@ -1016,6 +1016,78 @@ def STK_progressive_charge(dd):
     ### Add new cut that progressive charge should at least be made up of one X and one Y layer
     dd['STK_prog_acceptable'] = w_even*w_odd
 
+
+
+
+# def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, vertex=0.5):
+#     from scipy.interpolate import make_interp_spline
+#     if( trigger in ['MIP1','MIP2'] ):
+#         trigger = 'MIP'
+#     import pickle
+#     splines_dir = Code_folder + 'PSD_smearing/Smearing_parameterisations/'
+#     MC_type = 'MCFLUKA' if('Fluka' in list(MC_samples)[0]) else 'MC'
+#     source_file = splines_dir+"{}_{}_Vertex_{}_FitResultsMean.pickle".format(MC_type,trigger,vertex)
+#     print('Reading:', source_file)
+#     with open(source_file, "rb") as f:
+#         Fit_results_mean = pickle.load(f)
+#     with open(source_file.replace('Mean',''), "rb") as f:
+#         Fit_results = pickle.load(f)
+
+#     for sample in MC_samples:
+#         dd[sample]["PSD_charge_corr"] = np.zeros( (len(dd[sample]["PSD_charge"]),4), dtype=float)
+#         E = dd[sample]['Deposited_energy']
+#         # No need to redo smearing for p15
+#         sample_to_use = sample.replace('_p15','').replace('_p12','').replace('_old', '').replace('_all','')
+#         sample_to_use = sample_to_use.replace('Helium3','Helium')
+
+#         ### Use the mean of the four layers
+#         if( any([x in sample for x in ['Lithium','Beryllium']]) ):
+#             # but for lithium and beryllium, the scale is badly fit, so we use the value from oxygen
+#             addon = 'Fluka' if('Fluka' in sample) else ''
+#             dummy, dummy, scale, dummy = Fit_results_mean['Helium'+addon]
+#             MPV, weight, dummy, MPV_shift = Fit_results_mean[sample_to_use]
+#         else:
+#             MPV, weight, scale, MPV_shift = Fit_results_mean[sample_to_use]
+#         ### Use the values of the first sublayer
+#         #MPV, weight, scale, MPV_shift = list(zip(*Fit_results[(sample_to_use,0)]))
+
+#         E_bins_center = Fit_results_mean['E_bins_center']#[:len(MPV)]
+
+#         for i in range(4):
+#             ### MPV (true, i.e. data)
+#             upper_gradient = 1.4
+#             spl = make_interp_spline(np.log10(E_bins_center), MPV, k=1)
+#             MPV_pe = spl(np.log10(E))
+#             w_right = E>E_bins_center[-1]
+#             MPV_pe[w_right] = spl(np.log10(E_bins_center[-1])) + upper_gradient*(np.log10(E[w_right])-np.log10(E_bins_center[-1]))
+
+#             ### Scaling width needed for MC
+#             #spl = make_interp_spline(np.log10(E_bins_center), scale, k=1)
+#             # --> Better if scale keeps decreasing (for proton & helium)
+#             upper_gradient = -0.09
+#             keepn = 9
+#             spl = make_interp_spline(np.log10(E_bins_center[:keepn]), scale[:keepn], k=1)
+#             scale_pe = spl(np.log10(E))
+#             w_right = E>E_bins_center[keepn]
+#             scale_pe[w_right] = spl(np.log10(E_bins_center[keepn])) + upper_gradient*(np.log10(E[w_right])-np.log10(E_bins_center[keepn]))
+            
+
+#             ### Shift MPV needed for MC
+#             upper_gradient = -1.
+#             spl = make_interp_spline(np.log10(E_bins_center[:-1]), MPV_shift[:-1], k=1)
+#             MPV_shift_pe = spl(np.log10(E))
+#             w_right = E>E_bins_center[-1]
+#             MPV_shift_pe[w_right] = spl(np.log10(E_bins_center[-1])) + upper_gradient*(np.log10(E[w_right])-np.log10(E_bins_center[-1]))
+#             q = dd[sample]["PSD_charge"][:,i]
+#             w = q>0.1
+#             dd[sample]["PSD_charge_corr"][w,i] = (q[w]-MPV_pe[w])*scale_pe[w] + MPV_pe[w] + MPV_shift_pe[w]
+            
+#     return None
+
+
+
+
+
 def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, vertex=0.5):
     from scipy.interpolate import make_interp_spline
     if( trigger in ['MIP1','MIP2'] ):
@@ -1038,55 +1110,39 @@ def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, vertex=0.5):
         sample_to_use = sample_to_use.replace('Helium3','Helium')
 
         ### Use the mean of the four layers
-        if( any([x in sample for x in ['Lithium','Beryllium']]) ):
-            # but for lithium and beryllium, the scale is badly fit, so we use the value from oxygen
-            addon = 'Fluka' if('Fluka' in sample) else ''
-            dummy, dummy, scale, dummy = Fit_results_mean['Helium'+addon]
-            MPV, weight, dummy, MPV_shift = Fit_results_mean[sample_to_use]
-        else:
-            MPV, weight, scale, MPV_shift = Fit_results_mean[sample_to_use]
+        MPV, weight, scale, MPV_shift = Fit_results_mean[sample_to_use]
         ### Use the values of the first sublayer
         #MPV, weight, scale, MPV_shift = list(zip(*Fit_results[(sample_to_use,0)]))
 
-        E_bins_center = Fit_results_mean['E_bins_center']#[:len(MPV)]
+        E_bins_center = Fit_results_mean['E_bins_center'][:len(MPV)]
 
         for i in range(4):
             ### MPV (true, i.e. data)
-            upper_gradient = 1.4
             spl = make_interp_spline(np.log10(E_bins_center), MPV, k=1)
             MPV_pe = spl(np.log10(E))
-            w_right = E>E_bins_center[-1]
-            MPV_pe[w_right] = spl(np.log10(E_bins_center[-1])) + upper_gradient*(np.log10(E[w_right])-np.log10(E_bins_center[-1]))
 
             ### Scaling width needed for MC
             #spl = make_interp_spline(np.log10(E_bins_center), scale, k=1)
             # --> Better if scale keeps decreasing (for proton & helium)
             FLUKA = 'Fluka' in sample
-            right_cut = 1.8e4
-            keepn = 13
-            if( FLUKA ):
-                keepn = 9
-            elif( 'Proton' in sample ):
-                keepn = 10
-                right_cut = 2e3
+            keepn = 9 if( FLUKA) else 10
             spl = make_interp_spline(np.log10(E_bins_center[:keepn]), scale[:keepn], k=1)
             scale_pe = spl(np.log10(E))
-            w_right = E>right_cut
-            scale_pe[w_right] = spl(np.log10(right_cut))
-            
 
             ### Shift MPV needed for MC
-            upper_gradient = -1.
             spl = make_interp_spline(np.log10(E_bins_center[:-1]), MPV_shift[:-1], k=1)
             MPV_shift_pe = spl(np.log10(E))
-            w_right = E>E_bins_center[-1]
-            MPV_shift_pe[w_right] = spl(np.log10(E_bins_center[-1])) + upper_gradient*(np.log10(E[w_right])-np.log10(E_bins_center[-1]))
 
             q = dd[sample]["PSD_charge"][:,i]
             w = q>0.1
             dd[sample]["PSD_charge_corr"][w,i] = (q[w]-MPV_pe[w])*scale_pe[w] + MPV_pe[w] + MPV_shift_pe[w]
 
     return None
+
+
+
+
+
 
 def PSD_selection(dd, trigger, sample, sigma_left=-5, sigma_right=3):
     idx = 4 # Using Xin's charge for now
