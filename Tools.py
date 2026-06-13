@@ -688,10 +688,35 @@ def DmpTrigger(TriggerStat, idx, MC=None):
     triggered = int(TriggerStatBin[8+idx])
     return enabled * triggered
 
-def PSD_charge_fit_old(x, a, b, c, d):
-    # Sum of a linear function and an exponential
-    # Similar to Misha, he uses a + exp(b * x + c)
-    return np.exp(a*(x-b)) + c + d*x
+def RMS_BGO(E):
+    RMSs = []
+    for El in E:
+        num, den = 0, 0
+        idx_max = np.argmax(El)
+        if( idx_max==21 ):
+            COG = 21
+        elif( idx_max==0 ):
+            COG = 0
+        else:
+            for i in range(idx_max-1,idx_max+2):
+                num += i*El[i]
+                den += El[i]
+            COG = num/max(den,1e-6)
+
+        num, den = 0, 0
+        for i in range(22):
+            num += El[i] * (i-COG)**2
+            den += El[i]
+        RMS = np.sqrt( num/max(den,1e-6) )
+        RMSs.append( RMS )
+    return np.array( RMSs )
+
+def XTRL(E_l, RMSs):
+    # David: double XtrLast =sumRms*sumRms*sumRms*sumRms*fracLast/8000000.;
+    sum_RMS = 27.5*np.sum(RMSs)
+    E_last = E_l[E_l>1][-1] # 1e-3 is applied later, in combine_npy_dict function, so 1 = 1 MeV
+    Frac_last = E_last / np.sum(E_l)
+    return (sum_RMS**4 * Frac_last)/8e6
 
 def PSD_charge_fit(loge, *p):
     return p[0] + p[1] * loge**p[2] + p[3]*loge**p[4]
@@ -704,7 +729,7 @@ def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0, vertex=0.5, N_aver
     sample_to_use = sample.replace('_p15','').replace('_p12','').replace('_old', '').replace('_all','')
     if( trigger in ['MIP1','MIP2'] ):
         trigger = 'MIP'
-    s_dir = Code_folder + 'PSD_smearing/Smearing_parameterisations/'
+    s_dir = Code_folder + 'PSD_smearing/Smearing_parameterisations/NEW_with_PSD_prog/'
     MCtype = 'MCFLUKA' if( 'Fluka' in sample ) else 'MC'
     if( PSD_sublayer==-1 ):
         with open(s_dir+"{}_{}_Vertex_{}_FitResultsMean.pickle".format(MCtype,trigger,vertex), "rb") as f:
@@ -1322,29 +1347,6 @@ def Combine_npy_dict(Filelist=[], keys=[],\
 
     for files in Filelist:
         data_is = [np.load(npy_dir+f, allow_pickle=True, encoding="latin1").item() for f in files]
-        ########################################################################################################################
-        # Quick and dirty fix. Keeping this here so I can still run smearing, until all MC n-tuples are recreated
-        # Rename variables for old n-tuples and use proton ML tracks when asking for ion ones
-        # old_keys = ["PSD_charge_STKtrack","PSD_length_STKtrack", "BGO_energy_STKtrack", "BGO_length_STKtrack",\
-        #             "PSD_charge_BGOtrack","PSD_length_BGOtrack", "BGO_energy_BGOtrack", "BGO_length_BGOtrack",\
-        #             "VertexPrediction",'HitSignal','HitDistance', "ML_BGO_costheta", "ML_STK_costheta",\
-        #             "BGOInterceptX", "BGOInterceptY", "STKInterceptX", "STKInterceptY", 'HitSignalCombined', \
-        #             'HitSignalEtaThetaCorr',"STKSlopeX", "STKSlopeY", "BGOSlopeX", "BGOSlopeY",\
-        #             'Median_STK_charge_EtaThetaCorr', 'VertexPrediction_REG_BGO']
-        # for old_key in old_keys:
-        #     for iss in range(len(data_is)):
-        #         if( old_key in data_is[iss] ):
-        #             data_is[iss][old_key+'_default'] = data_is[iss].pop(old_key)
-        #             data_is[iss][old_key+'_ions'] = data_is[iss][old_key+'_default']
-        #         if( (old_key+'_default' in data_is[iss]) and (old_key+'_ions' not in data_is[iss]) ):
-        #             data_is[iss][old_key+'_ions'] = data_is[iss][old_key+'_default']
-        #         if( 'PSD_charge_Xin_pro_STKtrack' in data_is[iss] ):
-        #             data_is[iss]['PSD_charge_Xin_ion_STKtrack'] = data_is[iss]['PSD_charge_Xin_pro_STKtrack']
-        ########################################################################################################################
-        # if( 'E_total_BGO_quench' in data_is[0] ):
-        #     if( 'E_total_BGO_quench' not in keys ):
-        #         keys = list(keys)
-        #         keys.append('E_total_BGO_quench')
         N_i = 0
         for data_i in data_is:
             N_i += len(data_i['E_p']) + int( 10 * len(data_i['E_primary_non_trig']) )
@@ -1372,6 +1374,9 @@ def Combine_npy_dict(Filelist=[], keys=[],\
             for key in keys:
                 if( (key=='MIP_trigger') and (key not in data_i) ):
                     data_i[key] = data_i['MIP1_trigger'] * data_i['MIP2_trigger']
+                elif( (key=='E_total_BGO_quench') and (key not in data_i) ):
+                    ### Assume I know what I'm doing (this is for p12 samples compatibility)
+                    data_i[key] = data_i['E_total_BGO']
                 if( key not in data ):
                     data[key] = data_i[key]
                 else:
