@@ -570,7 +570,7 @@ class Hist(object):
                 kw_copy = copy.deepcopy(kw)
                 kw_copy['weights'] = np.power(kw_copy['weights'],2)
                 self.hist_squares, self.bins = np.histogram(data, **kw_copy)
-                self.uncertainty = [[x,x] for x in np.sqrt(self.hist_squares)]
+                self.uncertainty = np.array([[x,x] for x in np.sqrt(self.hist_squares)])
             else:
                 self.uncertainty = []
 
@@ -597,9 +597,15 @@ class Hist(object):
             self.hist[idx] = self.hist[idx] + counts
             self.set_vars()
 
-    def Add_values(self, values):
-        new_hist, new_bin_edges = np.histogram(values, bins=self.bins)
+    def Add_values(self, values, **kwargs):
+        new_hist, new_bin_edges = np.histogram(values, bins=self.bins, **kwargs)
         self.hist += new_hist
+        if( 'weights' in kwargs ):
+            import copy
+            kw_copy = copy.deepcopy(kwargs)
+            kw_copy['weights'] = np.power(kw_copy['weights'],2)
+            self.hist_squares, self.bins = np.histogram(values, bins=self.bins, **kw_copy)
+            self.uncertainty = np.sqrt(np.power(self.uncertainty,2) + np.array([[x,x] for x in self.hist_squares]))
         self.set_vars()
 
     def set_errors(self, probability_content = 0.683):
@@ -1132,7 +1138,7 @@ def Smear_PSD_charge_MC_to_data(dd, trigger, MC_samples, vertex=0.5):
         E = dd[sample]['Deposited_energy']
         # No need to redo smearing for p15
         sample_to_use = sample.replace('_p15','').replace('_p12','').replace('_old', '').replace('_all','')
-        sample_to_use = sample_to_use.replace('Helium3','Helium')
+        sample_to_use = sample_to_use.replace('Helium3','Helium').replace('_QGSJET', '')
 
         ### Use the mean of the four layers
         MPV, weight, scale, MPV_shift = Fit_results_mean[sample_to_use]
@@ -1475,10 +1481,10 @@ Proton_old_filelist = [["allProton-v6r0p0_1GeV_100GeV_FTFP.npy",],\
                        ["allProton-v6r0p0_100GeV_10TeV_FTFP_HP.npy",],\
                        ["allProton-v6r0p0_10TeV_100TeV_FTFP_HP.npy",]]
 ProtonFluka_filelist =[["allProton-v6r0p15_1GeV_10GeV_FLUKA.npy",],\
-                       ["allProton-v6r0p15_10GeV_100GeV-FLUKA.npy",],\
-                       ["allProton-v6r0p15_100GeV_1TeV-FLUKA.npy",],\
-                       ["allProton-v6r0p15_1TeV_10TeV-FLUKA.npy",],\
-                       ["allProton-v6r0p15_10TeV_100TeV-FLUKA.npy",],\
+                       ["allProton-v6r0p15_10GeV_100GeV-FLUKA.npy","allProton-v6r0p18_10GeV_100GeV-FLUKA.npy"],\
+                       ["allProton-v6r0p15_100GeV_1TeV-FLUKA.npy","allProton-v6r0p18_100GeV_1TeV_FLUKA.npy"],\
+                       ["allProton-v6r0p15_1TeV_10TeV-FLUKA.npy","allProton-v6r0p18_1TeV_10TeV-FLUKA.npy"],\
+                       ["allProton-v6r0p15_10TeV_100TeV-FLUKA.npy","allProton-v6r0p18_10TeV_100TeV-FLUKA.npy","allProton-v6r0p18_10TeV_100TeV-FLUKA-p2.npy"],\
                        ["allProton-v6r0p15_100TeV_1PeV-FLUKA.npy",]]
 Deuteron_filelist = [['allDeuteron-v6r0p15_10GeV_100GeV_FTFP.npy',],
                      ['allDeuteron-v6r0p15_100GeV_1TeV_FTFP.npy',],
@@ -1497,6 +1503,12 @@ Helium_p15_filelist = [['allHe4-v6r0p15_1GeV_10GeV_FTFP.npy',],
                        ["allHe4-v6r0p12_100TeV_500TeV-EPOSLHC_reg-p1-p2.npy", "allHe4-v6r0p15_100TeV_500TeV_EPOSLHC_FTFP.npy"],\
                        ["allHe4-v6r0p15_500TeV_1PeV-EPOSLHC_FTFP.npy","allHe4-v6r0p15_500TeV_1PeV_EPOSLHC_BERT-p1.npy"],\
                        ['allHe4-v6r0p16_1PeV_5PeV-EPOSLHC_FTFP.npy']]
+Helium_p15QGSJET_filelist = [['allHe4-v6r0p15_1GeV_10GeV_FTFP.npy',],
+                             ["allHe4-v6r0p12_10GeV_100GeV-FTFP_BGO_Quenching.npy"],\
+                             ["allHe4-v6r0p12_100GeV_1TeV-FTFP_BGO_Quenching.npy", "allHe4-v6r0p15_100GeV_1TeV_FTFP.npy"],\
+                             ["allHe4-v6r0p12_1TeV_10TeV-FTFP-BGO_Quenching.npy", "allHe4-v6r0p15_1TeV_10TeV_FTFP.npy"],\
+                             ["allHe4-v6r0p20_10TeV_100TeV-QGSJET_FTFP.npy"],\
+                             ["allHe4-v6r0p20_100TeV_1PeV-QGSJET_FTFP.npy"]]
 Helium_all_filelist = [['allHe4-v6r0p15_1GeV_10GeV_FTFP.npy',],
                        ["allHe4-v6r0p10_10GeV_100GeV_FTFP.npy","allHe4-v6r0p12_10GeV_100GeV-FTFP_BGO_Quenching.npy"],\
                        ["allHe4-v6r0p10_100GeV_1TeV_FTFP.npy","allHe4-v6r0p12_100GeV_1TeV-FTFP_BGO_Quenching.npy", "allHe4-v6r0p15_100GeV_1TeV_FTFP.npy"],\
@@ -1589,7 +1601,7 @@ Proton_FullDiffraction_filelist = [["allProton-v6r0p15_1GeV_1TeV_FTFP_FullDiffra
 sample_sets = {'Proton': Proton_filelist, 'Proton_p15': Proton_p15_filelist, 'Proton_all': Proton_all_filelist,\
                'Deuteron': Deuteron_filelist,\
                'Helium': Helium_filelist, 'Helium_p15': Helium_p15_filelist, 'Helium_all': Helium_all_filelist,\
-               'Helium3': Helium3_filelist,\
+               'Helium3': Helium3_filelist, 'Helium_QGSJET': Helium_p15QGSJET_filelist,\
                'Proton_old': Proton_old_filelist,\
                'Proton_TargetDiffraction': Proton_TargetDiffraction_filelist, 'Helium_TargetDiffraction': Helium_TargetDiffraction_filelist,\
                'Proton_FullDiffraction': Proton_FullDiffraction_filelist,\
