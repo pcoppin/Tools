@@ -1490,6 +1490,10 @@ Deuteron_filelist = [['allDeuteron-v6r0p15_10GeV_100GeV_FTFP.npy',],
                      ['allDeuteron-v6r0p15_100GeV_1TeV_FTFP.npy',],
                      ['allDeuteron-v6r0p15_1TeV_10TeV_FTFP.npy',],
                      ['allDeuteron-v6r0p15_10TeV_100TeV_FTFP.npy',]]
+DeuteronFluka_filelist = [['allDeuteron-v6r0p18_10GeV_100GeV_FLUKA.npy',],
+                          ['allDeuteron-v6r0p18_100GeV_1TeV_FLUKA.npy',],
+                          ['allDeuteron-v6r0p18_1TeV_10TeV_FLUKA.npy',],
+                          ['allDeuteron-v6r0p18_10TeV_100TeV_FLUKA.npy',]]
 Helium_filelist = [["allHe4-v6r0p10_10GeV_100GeV_FTFP.npy",],\
                    ["allHe4-v6r0p10_100GeV_1TeV_FTFP.npy",],\
                    ["allHe4-v6r0p10_1TeV_10TeV-FTFP.npy",],\
@@ -1522,7 +1526,8 @@ HeliumFluka_filelist = [["allHe4-v6r0p15_1GeV_10GeV_FLUKA.npy",],\
                         ["allHe4-v6r0p10_100GeV_1TeV-FLUKA.npy",],\
                         ["allHe4-v6r0p10_1TeV_10TeV-FLUKA.npy",],\
                         ["allHe4-v6r0p10_10TeV_100TeV-FLUKA-p1.npy",],\
-                        ["allHe4-v6r0p10_100TeV_500TeV-FLUKA.npy",]]
+                        ["allHe4-v6r0p10_100TeV_500TeV-FLUKA.npy",],
+                        ["Fluka_Helium/allHe4-v6r0p18_500TeV_1PeV_FLUKA",]]
 Helium3_filelist = [["allHe3-v6r0p10_10GeV_100GeV_FTFP.npy",],\
                     ["allHe3-v6r0p10_100GeV_1TeV_FTFP.npy",],\
                     ["allHe3-v6r0p10_1TeV_10TeV-FTFP.npy",],\
@@ -1606,6 +1611,7 @@ sample_sets = {'Proton': Proton_filelist, 'Proton_p15': Proton_p15_filelist, 'Pr
                'Proton_TargetDiffraction': Proton_TargetDiffraction_filelist, 'Helium_TargetDiffraction': Helium_TargetDiffraction_filelist,\
                'Proton_FullDiffraction': Proton_FullDiffraction_filelist,\
                'ProtonFluka': ProtonFluka_filelist, 'HeliumFluka': HeliumFluka_filelist,\
+               'DeuteronFluka': DeuteronFluka_filelist,\
                'Lithium7': Lithium7_filelist, 'Beryllium9': Beryllium9_filelist,\
                'Boron': Boron_filelist, 'Nitrogen': Nitrogen_filelist,\
                'Proton120': Proton120_filelist, 'Proton80': Proton80_filelist,\
