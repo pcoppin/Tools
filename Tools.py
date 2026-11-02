@@ -733,6 +733,7 @@ def PSD_weight_fit(loge, *p):
 def Sample_frac(sample, E_BGO, trigger='MIP', PSD_sublayer=0, vertex=0.5, N_average_over=1):
     # Smearing splines for MIP are for x and y
     sample_to_use = sample.replace('_p15','').replace('_p12','').replace('_old', '').replace('_all','')
+    sample_to_use = sample_to_use.replace('_QGSJET','')
     if( trigger in ['MIP1','MIP2'] ):
         trigger = 'MIP'
     s_dir = Code_folder + 'PSD_smearing/Smearing_parameterisations/NEW_with_PSD_prog/'
@@ -1527,7 +1528,7 @@ HeliumFluka_filelist = [["allHe4-v6r0p15_1GeV_10GeV_FLUKA.npy",],\
                         ["allHe4-v6r0p10_1TeV_10TeV-FLUKA.npy",],\
                         ["allHe4-v6r0p10_10TeV_100TeV-FLUKA-p1.npy",],\
                         ["allHe4-v6r0p10_100TeV_500TeV-FLUKA.npy",],
-                        ["Fluka_Helium/allHe4-v6r0p18_500TeV_1PeV_FLUKA",]]
+                        ["allHe4-v6r0p18_500TeV_1PeV_FLUKA.npy",]]
 Helium3_filelist = [["allHe3-v6r0p10_10GeV_100GeV_FTFP.npy",],\
                     ["allHe3-v6r0p10_100GeV_1TeV_FTFP.npy",],\
                     ["allHe3-v6r0p10_1TeV_10TeV-FTFP.npy",],\
@@ -1583,6 +1584,24 @@ OxygenFluka_filelist = [["allO16-v6r0p15_10GeV_100GeV-FLUKA.npy",],\
                         ["allO16-v6r0p14-reco-v6r0p15_1TeV_10TeV-FLUKA.npy",],\
                         ["allO16-v6r0p14-reco-v6r0p15_10TeV_100TeV-FLUKA.npy",],\
                         ["allO16-v6r0p14-reco-v6r0p15_100TeV_500TeV-FLUKA.npy",]]
+Iron_filelist = [['allFe56-v6r0p13-reco-v6r0p15_100GeV_1TeV-FTFP',],\
+                 ['allFe56-v6r0p13-reco-v6r0p15_1TeV_10TeV-FTFP,'],\
+                 ['allFe56-v6r0p15_10TeV_100TeV_EPOSLHC_FTFP',],\
+                 ['allFe56-v6r0p15_100TeV_500TeV-EPOSLHC_FTFP-p0p1',],\
+                 ['allFe56-v6r0p13-reco-v6r0p15_500TeV_1PeV-EPOSLHC_FTFP',],\
+                 ['allFe56-v6r0p15_1PeV_3PeV-EPOSLHC_FTFP',],\
+                 ['allFe56-v6r0p16_3PeV_10PeV-EPOSLHC_FTFP',]]
+
+
+
+
+
+
+
+
+
+
+
 
 
 HeliumFullSky_filelist = ["Helium_10GeV_10TeV_FullSky.npy"]
@@ -1619,4 +1638,5 @@ sample_sets = {'Proton': Proton_filelist, 'Proton_p15': Proton_p15_filelist, 'Pr
                'Helium200': Helium200_filelist, 'HeliumFullSky': HeliumFullSky_filelist,\
                'Carbon': Carbon_filelist, 'Oxygen': Oxygen_filelist,\
                'CarbonFluka': CarbonFluka_filelist, 'OxygenFluka': OxygenFluka_filelist,\
-               'BoronFluka': BoronFluka_filelist, 'NitrogenFluka': NitrogenFluka_filelist}
+               'BoronFluka': BoronFluka_filelist, 'NitrogenFluka': NitrogenFluka_filelist,\
+               'Iron': Iron_filelist}
