@@ -1486,7 +1486,8 @@ ProtonFluka_filelist =[["allProton-v6r0p15_1GeV_10GeV_FLUKA.npy",],\
                        ["allProton-v6r0p15_100GeV_1TeV-FLUKA.npy","allProton-v6r0p18_100GeV_1TeV_FLUKA.npy"],\
                        ["allProton-v6r0p15_1TeV_10TeV-FLUKA.npy","allProton-v6r0p18_1TeV_10TeV-FLUKA.npy"],\
                        ["allProton-v6r0p15_10TeV_100TeV-FLUKA.npy","allProton-v6r0p18_10TeV_100TeV-FLUKA.npy","allProton-v6r0p18_10TeV_100TeV-FLUKA-p2.npy"],\
-                       ["allProton-v6r0p15_100TeV_1PeV-FLUKA.npy",]]
+                       ["allProton-v6r0p15_100TeV_1PeV-FLUKA.npy",],\
+                       ["allProton-v6r0p20_1PeV_5PeV-FLUKA.npy",]]
 Deuteron_filelist = [['allDeuteron-v6r0p15_10GeV_100GeV_FTFP.npy',],
                      ['allDeuteron-v6r0p15_100GeV_1TeV_FTFP.npy',],
                      ['allDeuteron-v6r0p15_1TeV_10TeV_FTFP.npy',],
@@ -1528,7 +1529,8 @@ HeliumFluka_filelist = [["allHe4-v6r0p15_1GeV_10GeV_FLUKA.npy",],\
                         ["allHe4-v6r0p10_1TeV_10TeV-FLUKA.npy",],\
                         ["allHe4-v6r0p10_10TeV_100TeV-FLUKA-p1.npy",],\
                         ["allHe4-v6r0p10_100TeV_500TeV-FLUKA.npy",],
-                        ["allHe4-v6r0p18_500TeV_1PeV_FLUKA.npy",]]
+                        ["allHe4-v6r0p18_500TeV_1PeV_FLUKA.npy",],\
+                        ["allHe4-v6r0p20_1PeV_5PeV-FLUKA.npy",]]
 Helium3_filelist = [["allHe3-v6r0p10_10GeV_100GeV_FTFP.npy",],\
                     ["allHe3-v6r0p10_100GeV_1TeV_FTFP.npy",],\
                     ["allHe3-v6r0p10_1TeV_10TeV-FTFP.npy",],\
